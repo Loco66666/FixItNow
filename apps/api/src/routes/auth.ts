@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { signupBodySchema, loginBodySchema } from "@fixitnow/types";
+import { legacy } from "@fixitnow/types";
 import { validate } from "../middlewares/validate";
 import { requireAuth } from "../middlewares/requireAuth";
 import {
@@ -12,8 +12,8 @@ import {
 
 const router = Router();
 
-router.post("/signup", validate({ body: signupBodySchema }), signup);
-router.post("/login", validate({ body: loginBodySchema }), login);
+router.post("/signup", validate({ body: legacy.signupBodySchema }), signup);
+router.post("/login", validate({ body: legacy.loginBodySchema }), login);
 router.post("/refresh", refresh);
 router.post("/logout", requireAuth, logout);
 router.get("/me", requireAuth, me);

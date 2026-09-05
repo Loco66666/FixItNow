@@ -2,11 +2,11 @@ import jwt, { type SignOptions } from "jsonwebtoken";
 import { v4 as uuid } from "uuid";
 import { env } from "../config/env";
 import { getRedis } from "../config/redis";
-import type { UserRole } from "@fixitnow/types";
+import type { legacy } from "@fixitnow/types";
 
 export interface AccessTokenPayload {
   sub: string;
-  role: UserRole;
+  role: legacy.UserRole;
 }
 
 export interface RefreshTokenPayload {
@@ -16,7 +16,7 @@ export interface RefreshTokenPayload {
 
 const REFRESH_PREFIX = "refresh:";
 
-export function signAccessToken(userId: string, role: UserRole): string {
+export function signAccessToken(userId: string, role: legacy.UserRole): string {
   return jwt.sign({ sub: userId, role }, env.JWT_ACCESS_SECRET, {
     expiresIn: env.JWT_ACCESS_TTL as SignOptions["expiresIn"],
   });

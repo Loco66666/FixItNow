@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { Trash2 } from "lucide-react";
-import type { Review } from "@fixitnow/types";
+import type { Review } from "@fixitnow/types/legacy";
 import { Button } from "@/components/ui/button";
 import { StarDisplay } from "./StarRating";
 
@@ -11,7 +11,7 @@ interface ReviewListProps {
   currentUserId?: string | null;
   /** When provided, a trash button is rendered on the current user's review. */
   onDelete?: (id: string) => void;
-  /** Id of the review currently being deleted (shows a "Deleting…" state). */
+  /** Id of the review currently being deleted (shows a "Deletingâ€¦" state). */
   deletingId?: string | null;
 }
 
@@ -101,7 +101,7 @@ export function ReviewList({
                   onClick={() => onDelete(r.id)}
                 >
                   <Trash2 className="mr-1 h-4 w-4" />
-                  {deletingId === r.id ? "Deleting…" : "Delete"}
+                  {deletingId === r.id ? "Deletingâ€¦" : "Delete"}
                 </Button>
               )}
             </div>

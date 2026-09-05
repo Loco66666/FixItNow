@@ -1,11 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import { Types, type FilterQuery, type HydratedDocument } from "mongoose";
-import {
-  type CreateReviewBody,
-  type Review as ReviewDto,
-  type ReviewListResponse,
-  type ReviewQuery,
-} from "@fixitnow/types";
+import { legacy } from "@fixitnow/types";
 
 import { Review, type ReviewDoc } from "../models/Review";
 import { Business } from "../models/Business";
@@ -33,7 +28,7 @@ const isDuplicateKeyError = (e: unknown): e is MongoDuplicateKeyError =>
  *
  * The compute is idempotent: re-running over the same review set always
  * yields the same numbers, so we don't need a transaction to keep them in
- * sync — even if a second concurrent writer recomputes after us, the result
+ * sync â€” even if a second concurrent writer recomputes after us, the result
  * is identical.
  */
 async function recomputeBusinessRating(
@@ -57,7 +52,7 @@ async function recomputeBusinessRating(
   );
 }
 
-/** POST /reviews — one review per (user, business). */
+/** POST /reviews â€” one review per (user, business). */
 export async function createReview(
   req: Request,
   res: Response,
@@ -65,7 +60,7 @@ export async function createReview(
 ) {
   try {
     if (!req.auth) throw AppError.unauthorized();
-    const body = req.body as CreateReviewBody;
+    const body = req.body as legacy.CreateReviewBody;
 
     if (!isObjectId(body.businessId)) {
       throw AppError.badRequest("Invalid businessId");
@@ -107,7 +102,7 @@ export async function listReviews(
   next: NextFunction
 ) {
   try {
-    const query = req.query as unknown as ReviewQuery;
+    const query = req.query as unknown as legacy.ReviewQuery;
     const filter: FilterQuery<ReviewDoc> = {};
     if (query.businessId) {
       if (!isObjectId(query.businessId)) {
@@ -125,10 +120,10 @@ export async function listReviews(
       .populate("user", "name")
       .lean();
 
-    const items: ReviewDto[] = docs.map((d) =>
+    const items: legacy.Review[] = docs.map((d) =>
       serializeReview(d as unknown as ReviewLike)
     );
-    const body: ReviewListResponse = {
+    const body: legacy.ReviewListResponse = {
       items,
       page: query.page,
       limit: query.limit,
@@ -140,7 +135,7 @@ export async function listReviews(
   }
 }
 
-/** DELETE /reviews/:id — review author OR admin. */
+/** DELETE /reviews/:id â€” review author OR admin. */
 export async function deleteReview(
   req: Request,
   res: Response,

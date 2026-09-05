@@ -20,6 +20,6 @@ export type {
   ReviewListResponse,
   User,
   UserRole,
-} from "@fixitnow/types";
+} from "@fixitnow/types/legacy";
 
 export type BookingTabType = "booked" | "completed";

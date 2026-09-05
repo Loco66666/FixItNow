@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import type { Review } from "@fixitnow/types";
+import type { Review } from "@fixitnow/types/legacy";
 
 import { api, ApiError } from "@/lib/apiClient";
 import { useAuth } from "@/lib/auth-context";
@@ -30,7 +30,7 @@ interface ReviewSectionProps {
 /**
  * Compute a new (avg, count) pair from a *complete* review set. The local
  * compute matches the server's `recomputeBusinessRating` aggregation
- * (1-decimal rounded average, raw integer count) — see
+ * (1-decimal rounded average, raw integer count) â€” see
  * apps/api/src/controllers/reviews.controller.ts.
  */
 function aggregateOf(reviews: Review[]): RatingAggregate {
@@ -132,7 +132,7 @@ export function ReviewSection({
           <div className="text-muted-foreground flex items-center gap-2 text-sm">
             <StarDisplay value={Math.round(aggregate.ratingAvg)} size="sm" />
             <span>
-              {aggregate.ratingAvg.toFixed(1)} · {aggregate.ratingCount} review
+              {aggregate.ratingAvg.toFixed(1)} Â· {aggregate.ratingCount} review
               {aggregate.ratingCount === 1 ? "" : "s"}
             </span>
           </div>
@@ -142,7 +142,7 @@ export function ReviewSection({
       {status === "loading" ? null : status === "authenticated" ? (
         userHasReviewed ? (
           <p className="text-muted-foreground text-sm">
-            Thanks for sharing your experience — you&apos;ve already reviewed
+            Thanks for sharing your experience â€” you&apos;ve already reviewed
             this business.
           </p>
         ) : (
@@ -161,7 +161,7 @@ export function ReviewSection({
       )}
 
       {loading ? (
-        <p className="text-muted-foreground text-sm">Loading reviews…</p>
+        <p className="text-muted-foreground text-sm">Loading reviewsâ€¦</p>
       ) : error ? (
         <p
           role="alert"

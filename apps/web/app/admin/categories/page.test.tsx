@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { Category } from "@fixitnow/types";
+import type { Category } from "@fixitnow/types/legacy";
 
 import AdminCategoriesPage from "./page";
 
@@ -183,7 +183,7 @@ describe("<AdminCategoriesPage />", () => {
       await screen.findByRole("button", { name: /^delete cleaning$/i })
     );
 
-    // No API call yet — only after the explicit confirm.
+    // No API call yet â€” only after the explicit confirm.
     expect(apiMocks.remove).not.toHaveBeenCalled();
 
     const confirmBtn = await screen.findByRole("button", {
@@ -227,7 +227,7 @@ describe("<AdminCategoriesPage />", () => {
         expect.stringMatching(/still used by one or more businesses/i)
       );
     });
-    // Row stays — refusal is non-destructive.
+    // Row stays â€” refusal is non-destructive.
     expect(screen.getByText("Cleaning")).toBeInTheDocument();
   });
 });

@@ -5,7 +5,7 @@
  * without leaking ObjectIds.
  */
 import type { Types } from "mongoose";
-import type { Booking, Business, Category, Review } from "@fixitnow/types";
+import { legacy } from "@fixitnow/types";
 
 type Stringifiable = { toString(): string };
 
@@ -30,7 +30,7 @@ export interface CategoryLike {
   updatedAt: Date | string;
 }
 
-export function serializeCategory(doc: CategoryLike): Category {
+export function serializeCategory(doc: CategoryLike): legacy.Category {
   return {
     id: toId(doc._id),
     name: doc.name,
@@ -64,7 +64,7 @@ export interface BusinessLike {
   updatedAt: Date | string;
 }
 
-export function serializeBusiness(doc: BusinessLike): Business {
+export function serializeBusiness(doc: BusinessLike): legacy.Business {
   // A populated category is a plain object with a name; an unpopulated one
   // is just an ObjectId. ObjectIds happen to satisfy `'_id' in v` because of
   // their internal getters, so we look for a real schema field instead.
@@ -115,7 +115,7 @@ export interface BookingLike {
   updatedAt: Date | string;
 }
 
-export function serializeBooking(doc: BookingLike): Booking {
+export function serializeBooking(doc: BookingLike): legacy.Booking {
   const biz = doc.business as unknown;
   const businessIsPopulated =
     typeof biz === "object" &&
@@ -149,7 +149,7 @@ export interface ReviewLike {
   updatedAt: Date | string;
 }
 
-export function serializeReview(doc: ReviewLike): Review {
+export function serializeReview(doc: ReviewLike): legacy.Review {
   const u = doc.user as unknown;
   const userPopulated =
     typeof u === "object" &&

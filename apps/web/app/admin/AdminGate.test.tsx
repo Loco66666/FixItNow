@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
-import type { User } from "@fixitnow/types";
+import type { User } from "@fixitnow/types/legacy";
 
 import { AdminGate } from "./AdminGate";
 

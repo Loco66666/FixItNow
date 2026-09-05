@@ -7,7 +7,7 @@ import {
   createCategoryBodySchema,
   type Category,
   type CreateCategoryBody,
-} from "@fixitnow/types";
+} from "@fixitnow/types/legacy";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,7 +27,7 @@ interface CategoryFormProps {
  *
  * Validates against the *same* `createCategoryBodySchema` the API uses, so
  * the only thing the dashboard does differently is what it sends on submit
- * — POST vs. PATCH.
+ * â€” POST vs. PATCH.
  */
 export function CategoryForm({
   initial = null,
@@ -119,7 +119,7 @@ export function CategoryForm({
 
       <div className="flex items-center gap-2">
         <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Saving…" : submitLabel}
+          {isSubmitting ? "Savingâ€¦" : submitLabel}
         </Button>
         {onCancel && (
           <Button

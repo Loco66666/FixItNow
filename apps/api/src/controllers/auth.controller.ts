@@ -1,9 +1,5 @@
 import type { Request, Response, NextFunction } from "express";
-import {
-  signupBodySchema,
-  loginBodySchema,
-  type AuthResponse,
-} from "@fixitnow/types";
+import { legacy } from "@fixitnow/types";
 import { User } from "../models/User";
 import { AppError } from "../utils/AppError";
 import {
@@ -19,14 +15,14 @@ const REFRESH_COOKIE = "fin_rt";
 function setRefreshCookie(res: Response, token: string) {
   // In production the web (Vercel) and the API (Render) live on different
   // sites. A SameSite=Lax cookie can be SET on a cross-site response but
-  // is NOT sent on cross-site subresource fetches — so a new tab calling
+  // is NOT sent on cross-site subresource fetches ��� so a new tab calling
   // POST /auth/refresh from the browser would silently fail and log the
   // user out. SameSite=None unblocks cross-site send, and the browser
   // requires it to be paired with Secure (HTTPS-only).
   //
   // Local dev stays on Lax because (a) we don't ship HTTPS on localhost
   // so Secure would prevent the cookie being set at all, and (b)
-  // localhost:3000 ↔ localhost:4000 count as same-site so Lax already
+  // localhost:3000 ��� localhost:4000 count as same-site so Lax already
   // permits the cross-port fetch.
   const isProd = env.NODE_ENV === "production";
   res.cookie(REFRESH_COOKIE, token, {
@@ -47,7 +43,9 @@ function clearRefreshCookie(res: Response) {
   });
 }
 
-function userToJson(doc: InstanceType<typeof User>): AuthResponse["user"] {
+function userToJson(
+  doc: InstanceType<typeof User>
+): legacy.AuthResponse["user"] {
   const json = doc.toJSON() as Record<string, unknown>;
   const toIso = (v: unknown): string => {
     if (v instanceof Date) return v.toISOString();
@@ -59,7 +57,7 @@ function userToJson(doc: InstanceType<typeof User>): AuthResponse["user"] {
     name: String(json.name),
     email: String(json.email),
     image: (json.image as string | null | undefined) ?? null,
-    role: json.role as AuthResponse["user"]["role"],
+    role: json.role as legacy.AuthResponse["user"]["role"],
     createdAt: toIso(json.createdAt),
     updatedAt: toIso(json.updatedAt),
   };
@@ -67,7 +65,7 @@ function userToJson(doc: InstanceType<typeof User>): AuthResponse["user"] {
 
 export async function signup(req: Request, res: Response, next: NextFunction) {
   try {
-    const body = signupBodySchema.parse(req.body);
+    const body = legacy.signupBodySchema.parse(req.body);
 
     const exists = await User.findOne({ email: body.email }).lean();
     if (exists) throw AppError.conflict("Email is already registered");
@@ -78,7 +76,7 @@ export async function signup(req: Request, res: Response, next: NextFunction) {
     const { token: refreshToken } = await issueRefreshToken(user.id);
     setRefreshCookie(res, refreshToken);
 
-    const response: AuthResponse = {
+    const response: legacy.AuthResponse = {
       user: userToJson(user),
       accessToken,
     };
@@ -90,7 +88,7 @@ export async function signup(req: Request, res: Response, next: NextFunction) {
 
 export async function login(req: Request, res: Response, next: NextFunction) {
   try {
-    const body = loginBodySchema.parse(req.body);
+    const body = legacy.loginBodySchema.parse(req.body);
 
     // password is select:false, so explicitly select it.
     const user = await User.findOne({ email: body.email }).select("+password");
@@ -103,7 +101,7 @@ export async function login(req: Request, res: Response, next: NextFunction) {
     const { token: refreshToken } = await issueRefreshToken(user.id);
     setRefreshCookie(res, refreshToken);
 
-    const response: AuthResponse = {
+    const response: legacy.AuthResponse = {
       user: userToJson(user),
       accessToken,
     };

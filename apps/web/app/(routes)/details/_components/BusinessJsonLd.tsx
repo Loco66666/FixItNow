@@ -1,10 +1,10 @@
-import type { Business } from "@fixitnow/types";
+import type { Business } from "@fixitnow/types/legacy";
 import { env } from "@/lib/env";
 
 /**
  * Emits schema.org LocalBusiness structured data so search engines (and
  * Google's rich results) can render the business name, rating, and address
- * directly in SERPs. The shape is intentionally conservative — only fields
+ * directly in SERPs. The shape is intentionally conservative â€” only fields
  * we can guarantee are populated.
  *
  * Renders as a non-blocking inline <script type="application/ld+json">.

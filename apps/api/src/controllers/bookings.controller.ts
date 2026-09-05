@@ -1,13 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import { Types, type FilterQuery } from "mongoose";
-import {
-  type BookedSlotsQuery,
-  type BookedSlotsResponse,
-  type Booking as BookingDto,
-  type BookingListMineQuery,
-  type BookingListResponse,
-  type CreateBookingBody,
-} from "@fixitnow/types";
+import { legacy } from "@fixitnow/types";
 
 import { Booking, type BookingDoc } from "../models/Booking";
 import { Business } from "../models/Business";
@@ -28,7 +21,7 @@ const isDuplicateKeyError = (e: unknown): e is MongoDuplicateKeyError =>
   (e as { code: unknown }).code === 11000;
 
 /**
- * POST /bookings — creates a booking for the authenticated user. The unique
+ * POST /bookings â€” creates a booking for the authenticated user. The unique
  * partial index on (business, date, time, status="booked") makes the
  * "already taken" case race-safe: two concurrent inserts will see exactly
  * one succeed and one fail with E11000, which we map to a 409.
@@ -40,7 +33,7 @@ export async function createBooking(
 ) {
   try {
     if (!req.auth) throw AppError.unauthorized();
-    const body = req.body as CreateBookingBody;
+    const body = req.body as legacy.CreateBookingBody;
 
     if (!isObjectId(body.businessId)) {
       throw AppError.badRequest("Invalid businessId");
@@ -74,7 +67,7 @@ export async function createBooking(
   }
 }
 
-/** GET /bookings/mine — paginated list of the caller's bookings, newest first. */
+/** GET /bookings/mine â€” paginated list of the caller's bookings, newest first. */
 export async function listMyBookings(
   req: Request,
   res: Response,
@@ -82,7 +75,7 @@ export async function listMyBookings(
 ) {
   try {
     if (!req.auth) throw AppError.unauthorized();
-    const query = req.query as unknown as BookingListMineQuery;
+    const query = req.query as unknown as legacy.BookingListMineQuery;
 
     const filter: FilterQuery<BookingDoc> = {
       user: new Types.ObjectId(req.auth.userId),
@@ -98,10 +91,10 @@ export async function listMyBookings(
       .populate({ path: "business", populate: { path: "category" } })
       .lean();
 
-    const items: BookingDto[] = docs.map((d) =>
+    const items: legacy.Booking[] = docs.map((d) =>
       serializeBooking(d as unknown as BookingLike)
     );
-    const body: BookingListResponse = {
+    const body: legacy.BookingListResponse = {
       items,
       page: query.page,
       limit: query.limit,
@@ -125,7 +118,7 @@ export async function listBookedSlots(
   next: NextFunction
 ) {
   try {
-    const query = req.query as unknown as BookedSlotsQuery;
+    const query = req.query as unknown as legacy.BookedSlotsQuery;
     if (!isObjectId(query.businessId)) {
       throw AppError.badRequest("Invalid businessId");
     }
@@ -138,7 +131,7 @@ export async function listBookedSlots(
       .select("time")
       .lean();
 
-    const body: BookedSlotsResponse = {
+    const body: legacy.BookedSlotsResponse = {
       businessId: query.businessId,
       date: query.date,
       slots: rows.map((r) => r.time),
@@ -149,7 +142,7 @@ export async function listBookedSlots(
   }
 }
 
-/** PATCH /bookings/:id/cancel — owner only; idempotent. */
+/** PATCH /bookings/:id/cancel â€” owner only; idempotent. */
 export async function cancelBooking(
   req: Request,
   res: Response,

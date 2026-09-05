@@ -2,11 +2,11 @@ import type { NextFunction, Request, Response } from "express";
 import { JsonWebTokenError, TokenExpiredError } from "jsonwebtoken";
 import { AppError } from "../utils/AppError";
 import { verifyAccessToken } from "../services/tokens";
-import type { UserRole } from "@fixitnow/types";
+import type { legacy } from "@fixitnow/types";
 
 export interface AuthContext {
   userId: string;
-  role: UserRole;
+  role: legacy.UserRole;
 }
 
 declare global {
@@ -49,7 +49,7 @@ export function requireAuth(req: Request, _res: Response, next: NextFunction) {
  * RBAC gate. Use after requireAuth.
  *   router.delete("/x", requireAuth, requireRole("admin"), handler)
  */
-export function requireRole(...allowed: UserRole[]) {
+export function requireRole(...allowed: legacy.UserRole[]) {
   return (req: Request, _res: Response, next: NextFunction) => {
     if (!req.auth) return next(AppError.unauthorized());
     if (!allowed.includes(req.auth.role)) {

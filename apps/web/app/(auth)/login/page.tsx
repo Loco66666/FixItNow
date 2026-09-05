@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { loginBodySchema, type LoginBody } from "@fixitnow/types";
+import { loginBodySchema, type LoginBody } from "@fixitnow/types/legacy";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -103,7 +103,7 @@ export default function LoginPage() {
         )}
 
         <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Logging in…" : "Log in"}
+          {isSubmitting ? "Logging inâ€¦" : "Log in"}
         </Button>
       </form>
 

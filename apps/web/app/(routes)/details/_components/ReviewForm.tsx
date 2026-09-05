@@ -5,7 +5,7 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
-import { createReviewBodySchema, type Review } from "@fixitnow/types";
+import { createReviewBodySchema, type Review } from "@fixitnow/types/legacy";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -92,7 +92,7 @@ export function ReviewForm({ businessId, onCreated }: ReviewFormProps) {
           id="review-comment"
           rows={4}
           maxLength={1000}
-          placeholder="What stood out — quality, punctuality, value…"
+          placeholder="What stood out â€” quality, punctuality, valueâ€¦"
           aria-invalid={!!errors.comment}
           {...register("comment")}
         />
@@ -124,7 +124,7 @@ export function ReviewForm({ businessId, onCreated }: ReviewFormProps) {
       )}
 
       <Button type="submit" disabled={isSubmitting} className="self-start">
-        {isSubmitting ? "Posting…" : "Post review"}
+        {isSubmitting ? "Postingâ€¦" : "Post review"}
       </Button>
     </form>
   );

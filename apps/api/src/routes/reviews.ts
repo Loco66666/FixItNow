@@ -1,9 +1,5 @@
 import { Router } from "express";
-import {
-  createReviewBodySchema,
-  reviewIdParamSchema,
-  reviewQuerySchema,
-} from "@fixitnow/types";
+import { legacy } from "@fixitnow/types";
 
 import { validate } from "../middlewares/validate";
 import { requireAuth } from "../middlewares/requireAuth";
@@ -16,13 +12,13 @@ import {
 
 const router = Router();
 
-router.get("/", validate({ query: reviewQuerySchema }), listReviews);
+router.get("/", validate({ query: legacy.reviewQuerySchema }), listReviews);
 
 router.post(
   "/",
   requireAuth,
   rateLimit({ name: "reviews.create", max: 10, windowSec: 60 }),
-  validate({ body: createReviewBodySchema }),
+  validate({ body: legacy.createReviewBodySchema }),
   createReview
 );
 
@@ -30,7 +26,7 @@ router.delete(
   "/:id",
   requireAuth,
   rateLimit({ name: "reviews.delete", max: 30, windowSec: 60 }),
-  validate({ params: reviewIdParamSchema }),
+  validate({ params: legacy.reviewIdParamSchema }),
   deleteReview
 );
 

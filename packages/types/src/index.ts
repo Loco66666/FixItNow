@@ -22,3 +22,5 @@ export * from "./notification";
 export * from "./verification";
 export * from "./report";
 export * from "./media";
+
+export * as legacy from "./legacy/index";

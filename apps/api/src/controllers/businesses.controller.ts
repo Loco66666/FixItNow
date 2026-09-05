@@ -1,12 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import { Types, type FilterQuery } from "mongoose";
-import {
-  type Business as BusinessDto,
-  type BusinessListResponse,
-  type BusinessQuery,
-  type CreateBusinessBody,
-  type UpdateBusinessBody,
-} from "@fixitnow/types";
+import { legacy } from "@fixitnow/types";
 
 import { Business } from "../models/Business";
 import { Category } from "../models/Category";
@@ -19,7 +13,7 @@ const CACHE_PREFIX = "businesses";
 const isObjectId = (v: string): boolean => Types.ObjectId.isValid(v);
 
 /**
- * Resolve a category identifier — accepts an ObjectId, slug, or name. Returns
+ * Resolve a category identifier â€” accepts an ObjectId, slug, or name. Returns
  * the matching ObjectId or null if the category does not exist.
  */
 async function resolveCategoryId(
@@ -40,9 +34,9 @@ async function resolveCategoryId(
 
 /**
  * GET /businesses
- *   ?page&limit                — pagination
- *   ?category=slug|id|name     — category filter (resolved server-side)
- *   ?q=string                  — full-text search on name + about
+ *   ?page&limit                â€” pagination
+ *   ?category=slug|id|name     â€” category filter (resolved server-side)
+ *   ?q=string                  â€” full-text search on name + about
  *   ?near=lng,lat&radius=meters - geo search
  *
  * When `q` is supplied we sort by the text score, otherwise by rating desc.
@@ -53,7 +47,7 @@ export async function listBusinesses(
   next: NextFunction
 ) {
   try {
-    const query = req.query as unknown as BusinessQuery;
+    const query = req.query as unknown as legacy.BusinessQuery;
     const filter: FilterQuery<BusinessLike> = {};
     const sort: Record<string, 1 | -1 | { $meta: "textScore" }> = {};
     const projection: Record<string, unknown> = {};
@@ -61,7 +55,7 @@ export async function listBusinesses(
     if (query.category) {
       const catId = await resolveCategoryId(query.category);
       if (!catId) {
-        const body: BusinessListResponse = {
+        const body: legacy.BusinessListResponse = {
           items: [],
           page: query.page,
           limit: query.limit,
@@ -116,10 +110,10 @@ export async function listBusinesses(
       .populate("category")
       .lean();
 
-    const items: BusinessDto[] = docs.map((d) =>
+    const items: legacy.Business[] = docs.map((d) =>
       serializeBusiness(d as unknown as BusinessLike)
     );
-    const body: BusinessListResponse = {
+    const body: legacy.BusinessListResponse = {
       items,
       page: query.page,
       limit: query.limit,
@@ -131,7 +125,7 @@ export async function listBusinesses(
   }
 }
 
-/** GET /businesses/:id — by id OR slug. */
+/** GET /businesses/:id â€” by id OR slug. */
 export async function getBusiness(
   req: Request,
   res: Response,
@@ -151,7 +145,7 @@ export async function getBusiness(
   }
 }
 
-/** POST /businesses — auth required; the caller becomes the owner. */
+/** POST /businesses â€” auth required; the caller becomes the owner. */
 export async function createBusiness(
   req: Request,
   res: Response,
@@ -159,7 +153,7 @@ export async function createBusiness(
 ) {
   try {
     if (!req.auth) throw AppError.unauthorized();
-    const body = req.body as CreateBusinessBody;
+    const body = req.body as legacy.CreateBusinessBody;
 
     const category = await Category.findById(body.categoryId).lean();
     if (!category) throw AppError.badRequest("Unknown categoryId");
@@ -199,7 +193,7 @@ export async function createBusiness(
   }
 }
 
-/** PATCH /businesses/:id — owner OR admin. */
+/** PATCH /businesses/:id â€” owner OR admin. */
 export async function updateBusiness(
   req: Request,
   res: Response,
@@ -218,7 +212,7 @@ export async function updateBusiness(
       throw AppError.forbidden();
     }
 
-    const body = req.body as UpdateBusinessBody;
+    const body = req.body as legacy.UpdateBusinessBody;
     if (body.name !== undefined) existing.name = body.name;
     if (body.about !== undefined) existing.about = body.about;
     if (body.address !== undefined) existing.address = body.address;
@@ -257,7 +251,7 @@ export async function updateBusiness(
   }
 }
 
-/** DELETE /businesses/:id — owner OR admin. */
+/** DELETE /businesses/:id â€” owner OR admin. */
 export async function deleteBusiness(
   req: Request,
   res: Response,

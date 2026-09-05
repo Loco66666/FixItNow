@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { Review, User } from "@fixitnow/types";
+import type { Review, User } from "@fixitnow/types/legacy";
 
 import { aggregateOf, ReviewSection } from "./ReviewSection";
 import { pinCurrentUserFirst } from "./ReviewList";
@@ -144,7 +144,7 @@ function renderSection({
   return { onAggregateChange, ...utils };
 }
 
-describe("<ReviewSection /> — unauthenticated", () => {
+describe("<ReviewSection /> â€” unauthenticated", () => {
   it("shows a login link and no review form", async () => {
     renderSection();
     expect(
@@ -156,7 +156,7 @@ describe("<ReviewSection /> — unauthenticated", () => {
   });
 });
 
-describe("<ReviewSection /> — authenticated, no review yet", () => {
+describe("<ReviewSection /> â€” authenticated, no review yet", () => {
   beforeEach(() => {
     authMock.status = "authenticated";
     authMock.user = makeUser();
@@ -239,7 +239,7 @@ describe("<ReviewSection /> — authenticated, no review yet", () => {
   });
 });
 
-describe("<ReviewSection /> — authenticated, already reviewed", () => {
+describe("<ReviewSection /> â€” authenticated, already reviewed", () => {
   beforeEach(() => {
     authMock.status = "authenticated";
     authMock.user = makeUser();
@@ -307,7 +307,7 @@ describe("<ReviewSection /> — authenticated, already reviewed", () => {
   });
 });
 
-describe("<ReviewSection /> — error path", () => {
+describe("<ReviewSection /> â€” error path", () => {
   it("renders an error message when the initial fetch fails", async () => {
     authMock.status = "authenticated";
     authMock.user = makeUser();

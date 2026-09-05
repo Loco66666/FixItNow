@@ -1,13 +1,13 @@
 import { Schema, model, type HydratedDocument, type Model } from "mongoose";
 import bcrypt from "bcryptjs";
-import type { UserRole } from "@fixitnow/types";
+import type { legacy } from "@fixitnow/types";
 import { jsonTransform } from "./_transform";
 
 export interface UserAttrs {
   name: string;
   email: string;
   password: string;
-  role?: UserRole;
+  role?: legacy.UserRole;
   image?: string | null;
 }
 
@@ -16,7 +16,7 @@ export interface UserMethods {
 }
 
 export interface UserDoc extends UserAttrs, UserMethods {
-  role: UserRole;
+  role: legacy.UserRole;
   createdAt: Date;
   updatedAt: Date;
 }

@@ -8,7 +8,7 @@ import type {
   Category,
   CreateCategoryBody,
   UpdateCategoryBody,
-} from "@fixitnow/types";
+} from "@fixitnow/types/legacy";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -92,7 +92,7 @@ export default function AdminCategoriesPage() {
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
         toast.error(
-          "This category is still used by one or more businesses — reassign them first."
+          "This category is still used by one or more businesses â€” reassign them first."
         );
       } else if (err instanceof ApiError) {
         toast.error(err.message);
@@ -130,7 +130,7 @@ export default function AdminCategoriesPage() {
         </header>
 
         {loading ? (
-          <p className="text-muted-foreground p-5 text-sm">Loading…</p>
+          <p className="text-muted-foreground p-5 text-sm">Loadingâ€¦</p>
         ) : error ? (
           <p
             role="alert"
@@ -200,7 +200,7 @@ export default function AdminCategoriesPage() {
                                 aria-label={`Confirm delete ${c.name}`}
                                 onClick={() => handleDelete(c.id)}
                               >
-                                {isDeleting ? "Deleting…" : "Confirm"}
+                                {isDeleting ? "Deletingâ€¦" : "Confirm"}
                               </Button>
                               <Button
                                 variant="outline"

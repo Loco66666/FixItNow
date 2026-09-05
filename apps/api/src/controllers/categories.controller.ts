@@ -1,11 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import { Types } from "mongoose";
-import {
-  type Category as CategoryDto,
-  type CategoryListResponse,
-  type CreateCategoryBody,
-  type UpdateCategoryBody,
-} from "@fixitnow/types";
+import { legacy } from "@fixitnow/types";
 
 import { Category } from "../models/Category";
 import { Business } from "../models/Business";
@@ -17,7 +12,7 @@ const CACHE_PREFIX = "categories";
 
 const isObjectId = (v: string): boolean => Types.ObjectId.isValid(v);
 
-/** GET /categories — public list (cached). */
+/** GET /categories â€” public list (cached). */
 export async function listCategories(
   _req: Request,
   res: Response,
@@ -25,15 +20,15 @@ export async function listCategories(
 ) {
   try {
     const docs = await Category.find().sort({ name: 1 }).lean();
-    const items: CategoryDto[] = docs.map(serializeCategory);
-    const body: CategoryListResponse = { items };
+    const items: legacy.Category[] = docs.map(serializeCategory);
+    const body: legacy.CategoryListResponse = { items };
     res.json(body);
   } catch (e) {
     next(e);
   }
 }
 
-/** GET /categories/:id — by id OR slug. */
+/** GET /categories/:id â€” by id OR slug. */
 export async function getCategory(
   req: Request,
   res: Response,
@@ -51,14 +46,14 @@ export async function getCategory(
   }
 }
 
-/** POST /categories — admin only. */
+/** POST /categories â€” admin only. */
 export async function createCategory(
   req: Request,
   res: Response,
   next: NextFunction
 ) {
   try {
-    const body = req.body as CreateCategoryBody;
+    const body = req.body as legacy.CreateCategoryBody;
     const exists = await Category.findOne({ name: body.name }).lean();
     if (exists) throw AppError.conflict("A category with that name exists");
 
@@ -70,7 +65,7 @@ export async function createCategory(
   }
 }
 
-/** PATCH /categories/:id — admin only. */
+/** PATCH /categories/:id â€” admin only. */
 export async function updateCategory(
   req: Request,
   res: Response,
@@ -79,7 +74,7 @@ export async function updateCategory(
   try {
     const { id } = req.params;
     if (!isObjectId(id)) throw AppError.badRequest("Invalid category id");
-    const body = req.body as UpdateCategoryBody;
+    const body = req.body as legacy.UpdateCategoryBody;
 
     const doc = await Category.findByIdAndUpdate(id, body, {
       new: true,
@@ -94,7 +89,7 @@ export async function updateCategory(
   }
 }
 
-/** DELETE /categories/:id — admin only; refuses if businesses reference it. */
+/** DELETE /categories/:id â€” admin only; refuses if businesses reference it. */
 export async function deleteCategory(
   req: Request,
   res: Response,

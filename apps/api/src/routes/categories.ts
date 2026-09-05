@@ -1,9 +1,5 @@
 import { Router } from "express";
-import {
-  categoryIdParamSchema,
-  createCategoryBodySchema,
-  updateCategoryBodySchema,
-} from "@fixitnow/types";
+import { legacy } from "@fixitnow/types";
 
 import { validate } from "../middlewares/validate";
 import { requireAuth, requireRole } from "../middlewares/requireAuth";
@@ -19,7 +15,7 @@ import {
 
 const router = Router();
 
-// Public reads — cached for 60s.
+// Public reads â€” cached for 60s.
 router.get(
   "/",
   cache({ keyFn: () => "categories:list", ttl: 60, prefix: "categories" }),
@@ -27,7 +23,7 @@ router.get(
 );
 router.get(
   "/:id",
-  validate({ params: categoryIdParamSchema }),
+  validate({ params: legacy.categoryIdParamSchema }),
   cache({
     keyFn: (req) => `categories:by:${req.params.id.toLowerCase()}`,
     ttl: 60,
@@ -36,13 +32,13 @@ router.get(
   getCategory
 );
 
-// Admin-only writes — rate-limited to 30/min.
+// Admin-only writes â€” rate-limited to 30/min.
 router.post(
   "/",
   requireAuth,
   requireRole("admin"),
   rateLimit({ name: "categories.create", max: 30, windowSec: 60 }),
-  validate({ body: createCategoryBodySchema }),
+  validate({ body: legacy.createCategoryBodySchema }),
   createCategory
 );
 router.patch(
@@ -51,8 +47,8 @@ router.patch(
   requireRole("admin"),
   rateLimit({ name: "categories.update", max: 60, windowSec: 60 }),
   validate({
-    params: categoryIdParamSchema,
-    body: updateCategoryBodySchema,
+    params: legacy.categoryIdParamSchema,
+    body: legacy.updateCategoryBodySchema,
   }),
   updateCategory
 );
@@ -61,7 +57,7 @@ router.delete(
   requireAuth,
   requireRole("admin"),
   rateLimit({ name: "categories.delete", max: 30, windowSec: 60 }),
-  validate({ params: categoryIdParamSchema }),
+  validate({ params: legacy.categoryIdParamSchema }),
   deleteCategory
 );
 

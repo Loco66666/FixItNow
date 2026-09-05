@@ -12,55 +12,25 @@ import {
   OpenApiGeneratorV3,
 } from "@asteasolutions/zod-to-openapi";
 import { z } from "zod";
-
-import {
-  apiErrorSchema,
-  authResponseSchema,
-  bookedSlotsQuerySchema,
-  bookedSlotsResponseSchema,
-  bookingIdParamSchema,
-  bookingListMineQuerySchema,
-  bookingListResponseSchema,
-  bookingSchema,
-  businessIdParamSchema,
-  businessListResponseSchema,
-  businessQuerySchema,
-  businessSchema,
-  categoryIdParamSchema,
-  categoryListResponseSchema,
-  categorySchema,
-  createBookingBodySchema,
-  createBusinessBodySchema,
-  createCategoryBodySchema,
-  createReviewBodySchema,
-  loginBodySchema,
-  reviewIdParamSchema,
-  reviewListResponseSchema,
-  reviewQuerySchema,
-  reviewSchema,
-  signupBodySchema,
-  updateBusinessBodySchema,
-  updateCategoryBodySchema,
-  userSchema,
-} from "@fixitnow/types";
+import { legacy } from "@fixitnow/types";
 
 extendZodWithOpenApi(z);
 
 const registry = new OpenAPIRegistry();
 
 // --- Components / shared schemas ----------------------------------------
-registry.register("ApiError", apiErrorSchema);
-registry.register("User", userSchema);
-registry.register("AuthResponse", authResponseSchema);
-registry.register("Category", categorySchema);
-registry.register("Business", businessSchema);
-registry.register("Booking", bookingSchema);
-registry.register("Review", reviewSchema);
-registry.register("CategoryListResponse", categoryListResponseSchema);
-registry.register("BusinessListResponse", businessListResponseSchema);
-registry.register("BookingListResponse", bookingListResponseSchema);
-registry.register("ReviewListResponse", reviewListResponseSchema);
-registry.register("BookedSlotsResponse", bookedSlotsResponseSchema);
+registry.register("ApiError", legacy.apiErrorSchema);
+registry.register("User", legacy.userSchema);
+registry.register("AuthResponse", legacy.authResponseSchema);
+registry.register("Category", legacy.categorySchema);
+registry.register("Business", legacy.businessSchema);
+registry.register("Booking", legacy.bookingSchema);
+registry.register("Review", legacy.reviewSchema);
+registry.register("CategoryListResponse", legacy.categoryListResponseSchema);
+registry.register("BusinessListResponse", legacy.businessListResponseSchema);
+registry.register("BookingListResponse", legacy.bookingListResponseSchema);
+registry.register("ReviewListResponse", legacy.reviewListResponseSchema);
+registry.register("BookedSlotsResponse", legacy.bookedSlotsResponseSchema);
 
 const bearerAuth = registry.registerComponent("securitySchemes", "bearerAuth", {
   type: "http",
@@ -86,7 +56,7 @@ const noContent = (description = "No content") => ({ description });
 
 const error = (description: string) => ({
   description,
-  content: { "application/json": { schema: apiErrorSchema } },
+  content: { "application/json": { schema: legacy.apiErrorSchema } },
 });
 
 // --- Health -------------------------------------------------------------
@@ -117,11 +87,11 @@ registry.registerPath({
   summary: "Create a new user account",
   request: {
     body: {
-      content: { "application/json": { schema: signupBodySchema } },
+      content: { "application/json": { schema: legacy.signupBodySchema } },
     },
   },
   responses: {
-    201: created(authResponseSchema),
+    201: created(legacy.authResponseSchema),
     400: error("Validation error"),
     409: error("Email already registered"),
   },
@@ -134,11 +104,11 @@ registry.registerPath({
   summary: "Exchange credentials for an access + refresh token",
   request: {
     body: {
-      content: { "application/json": { schema: loginBodySchema } },
+      content: { "application/json": { schema: legacy.loginBodySchema } },
     },
   },
   responses: {
-    200: ok(authResponseSchema),
+    200: ok(legacy.authResponseSchema),
     401: error("Invalid credentials"),
   },
 });
@@ -170,7 +140,7 @@ registry.registerPath({
   summary: "Return the authenticated user",
   security: [{ [bearerAuth.name]: [] }],
   responses: {
-    200: ok(z.object({ user: userSchema })),
+    200: ok(z.object({ user: legacy.userSchema })),
     401: error("Not authenticated"),
   },
 });
@@ -181,7 +151,7 @@ registry.registerPath({
   path: "/categories",
   tags: ["Categories"],
   summary: "List all categories (cached for 60s)",
-  responses: { 200: ok(categoryListResponseSchema) },
+  responses: { 200: ok(legacy.categoryListResponseSchema) },
 });
 
 registry.registerPath({
@@ -189,8 +159,8 @@ registry.registerPath({
   path: "/categories/{id}",
   tags: ["Categories"],
   summary: "Get a category by id or slug",
-  request: { params: categoryIdParamSchema },
-  responses: { 200: ok(categorySchema), 404: error("Not found") },
+  request: { params: legacy.categoryIdParamSchema },
+  responses: { 200: ok(legacy.categorySchema), 404: error("Not found") },
 });
 
 registry.registerPath({
@@ -201,11 +171,13 @@ registry.registerPath({
   security: [{ [bearerAuth.name]: [] }],
   request: {
     body: {
-      content: { "application/json": { schema: createCategoryBodySchema } },
+      content: {
+        "application/json": { schema: legacy.createCategoryBodySchema },
+      },
     },
   },
   responses: {
-    201: created(categorySchema),
+    201: created(legacy.categorySchema),
     401: error("Not authenticated"),
     403: error("Admins only"),
     409: error("Duplicate name"),
@@ -219,13 +191,15 @@ registry.registerPath({
   summary: "Update a category (admin only)",
   security: [{ [bearerAuth.name]: [] }],
   request: {
-    params: categoryIdParamSchema,
+    params: legacy.categoryIdParamSchema,
     body: {
-      content: { "application/json": { schema: updateCategoryBodySchema } },
+      content: {
+        "application/json": { schema: legacy.updateCategoryBodySchema },
+      },
     },
   },
   responses: {
-    200: ok(categorySchema),
+    200: ok(legacy.categorySchema),
     403: error("Admins only"),
     404: error("Not found"),
   },
@@ -237,7 +211,7 @@ registry.registerPath({
   tags: ["Categories"],
   summary: "Delete a category (admin only)",
   security: [{ [bearerAuth.name]: [] }],
-  request: { params: categoryIdParamSchema },
+  request: { params: legacy.categoryIdParamSchema },
   responses: {
     204: noContent("Deleted"),
     403: error("Admins only"),
@@ -252,8 +226,8 @@ registry.registerPath({
   tags: ["Businesses"],
   summary:
     "Paginated list with category filter, text search, and ?near=lng,lat&radius= geo search",
-  request: { query: businessQuerySchema },
-  responses: { 200: ok(businessListResponseSchema) },
+  request: { query: legacy.businessQuerySchema },
+  responses: { 200: ok(legacy.businessListResponseSchema) },
 });
 
 registry.registerPath({
@@ -261,8 +235,8 @@ registry.registerPath({
   path: "/businesses/{id}",
   tags: ["Businesses"],
   summary: "Get a business by id or slug",
-  request: { params: businessIdParamSchema },
-  responses: { 200: ok(businessSchema), 404: error("Not found") },
+  request: { params: legacy.businessIdParamSchema },
+  responses: { 200: ok(legacy.businessSchema), 404: error("Not found") },
 });
 
 registry.registerPath({
@@ -273,11 +247,13 @@ registry.registerPath({
   security: [{ [bearerAuth.name]: [] }],
   request: {
     body: {
-      content: { "application/json": { schema: createBusinessBodySchema } },
+      content: {
+        "application/json": { schema: legacy.createBusinessBodySchema },
+      },
     },
   },
   responses: {
-    201: created(businessSchema),
+    201: created(legacy.businessSchema),
     400: error("Validation error"),
     401: error("Not authenticated"),
   },
@@ -290,13 +266,15 @@ registry.registerPath({
   summary: "Update a business (owner or admin)",
   security: [{ [bearerAuth.name]: [] }],
   request: {
-    params: businessIdParamSchema,
+    params: legacy.businessIdParamSchema,
     body: {
-      content: { "application/json": { schema: updateBusinessBodySchema } },
+      content: {
+        "application/json": { schema: legacy.updateBusinessBodySchema },
+      },
     },
   },
   responses: {
-    200: ok(businessSchema),
+    200: ok(legacy.businessSchema),
     403: error("Forbidden"),
     404: error("Not found"),
   },
@@ -308,7 +286,7 @@ registry.registerPath({
   tags: ["Businesses"],
   summary: "Delete a business (owner or admin)",
   security: [{ [bearerAuth.name]: [] }],
-  request: { params: businessIdParamSchema },
+  request: { params: legacy.businessIdParamSchema },
   responses: {
     204: noContent("Deleted"),
     403: error("Forbidden"),
@@ -325,11 +303,13 @@ registry.registerPath({
   security: [{ [bearerAuth.name]: [] }],
   request: {
     body: {
-      content: { "application/json": { schema: createBookingBodySchema } },
+      content: {
+        "application/json": { schema: legacy.createBookingBodySchema },
+      },
     },
   },
   responses: {
-    201: created(bookingSchema),
+    201: created(legacy.bookingSchema),
     404: error("Business not found"),
     409: error("Slot already booked"),
   },
@@ -341,8 +321,8 @@ registry.registerPath({
   tags: ["Bookings"],
   summary: "Paginated list of the caller's bookings",
   security: [{ [bearerAuth.name]: [] }],
-  request: { query: bookingListMineQuerySchema },
-  responses: { 200: ok(bookingListResponseSchema) },
+  request: { query: legacy.bookingListMineQuerySchema },
+  responses: { 200: ok(legacy.bookingListResponseSchema) },
 });
 
 registry.registerPath({
@@ -351,8 +331,8 @@ registry.registerPath({
   tags: ["Bookings"],
   summary:
     "Booked time slots for a given business + date — used by the booking UI",
-  request: { query: bookedSlotsQuerySchema },
-  responses: { 200: ok(bookedSlotsResponseSchema) },
+  request: { query: legacy.bookedSlotsQuerySchema },
+  responses: { 200: ok(legacy.bookedSlotsResponseSchema) },
 });
 
 registry.registerPath({
@@ -361,9 +341,9 @@ registry.registerPath({
   tags: ["Bookings"],
   summary: "Cancel a booking (owner only)",
   security: [{ [bearerAuth.name]: [] }],
-  request: { params: bookingIdParamSchema },
+  request: { params: legacy.bookingIdParamSchema },
   responses: {
-    200: ok(bookingSchema),
+    200: ok(legacy.bookingSchema),
     403: error("Forbidden"),
     404: error("Not found"),
   },
@@ -375,8 +355,8 @@ registry.registerPath({
   path: "/reviews",
   tags: ["Reviews"],
   summary: "List reviews (optionally filtered by businessId)",
-  request: { query: reviewQuerySchema },
-  responses: { 200: ok(reviewListResponseSchema) },
+  request: { query: legacy.reviewQuerySchema },
+  responses: { 200: ok(legacy.reviewListResponseSchema) },
 });
 
 registry.registerPath({
@@ -388,11 +368,13 @@ registry.registerPath({
   security: [{ [bearerAuth.name]: [] }],
   request: {
     body: {
-      content: { "application/json": { schema: createReviewBodySchema } },
+      content: {
+        "application/json": { schema: legacy.createReviewBodySchema },
+      },
     },
   },
   responses: {
-    201: created(reviewSchema),
+    201: created(legacy.reviewSchema),
     404: error("Business not found"),
     409: error("Already reviewed by this user"),
   },
@@ -404,7 +386,7 @@ registry.registerPath({
   tags: ["Reviews"],
   summary: "Delete a review (author or admin)",
   security: [{ [bearerAuth.name]: [] }],
-  request: { params: reviewIdParamSchema },
+  request: { params: legacy.reviewIdParamSchema },
   responses: {
     204: noContent("Deleted"),
     403: error("Forbidden"),

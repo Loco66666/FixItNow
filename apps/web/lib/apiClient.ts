@@ -10,7 +10,7 @@
  *   - Surfaces a single typed `ApiError` so callers can branch on `status`
  *     / `code` without parsing strings.
  *
- * The access token is intentionally kept in memory — never localStorage —
+ * The access token is intentionally kept in memory â€” never localStorage â€”
  * which avoids XSS exfiltration. We persist auth across reloads through
  * the refresh cookie + a silent `/auth/refresh` on app boot.
  */
@@ -19,7 +19,7 @@ import type {
   ApiError as ApiErrorEnvelope,
   AuthResponse,
   User,
-} from "@fixitnow/types";
+} from "@fixitnow/types/legacy";
 
 const API_BASE = env.NEXT_PUBLIC_API_URL.replace(/\/$/, "");
 
@@ -220,7 +220,7 @@ import type {
   CreateReviewBody,
   Review,
   ReviewListResponse,
-} from "@fixitnow/types";
+} from "@fixitnow/types/legacy";
 
 export interface BusinessSearchParams {
   page?: number;

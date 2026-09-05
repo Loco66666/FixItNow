@@ -1,10 +1,5 @@
 import { Router } from "express";
-import {
-  businessIdParamSchema,
-  businessQuerySchema,
-  createBusinessBodySchema,
-  updateBusinessBodySchema,
-} from "@fixitnow/types";
+import { legacy } from "@fixitnow/types";
 
 import { validate } from "../middlewares/validate";
 import { requireAuth } from "../middlewares/requireAuth";
@@ -40,14 +35,14 @@ const businessListCacheKey = (req: import("express").Request): string => {
 
 router.get(
   "/",
-  validate({ query: businessQuerySchema }),
+  validate({ query: legacy.businessQuerySchema }),
   cache({ keyFn: businessListCacheKey, ttl: 60, prefix: "businesses" }),
   listBusinesses
 );
 
 router.get(
   "/:id",
-  validate({ params: businessIdParamSchema }),
+  validate({ params: legacy.businessIdParamSchema }),
   cache({
     keyFn: (req) => `businesses:by:${req.params.id.toLowerCase()}`,
     ttl: 60,
@@ -60,7 +55,7 @@ router.post(
   "/",
   requireAuth,
   rateLimit({ name: "businesses.create", max: 10, windowSec: 60 }),
-  validate({ body: createBusinessBodySchema }),
+  validate({ body: legacy.createBusinessBodySchema }),
   createBusiness
 );
 
@@ -69,8 +64,8 @@ router.patch(
   requireAuth,
   rateLimit({ name: "businesses.update", max: 30, windowSec: 60 }),
   validate({
-    params: businessIdParamSchema,
-    body: updateBusinessBodySchema,
+    params: legacy.businessIdParamSchema,
+    body: legacy.updateBusinessBodySchema,
   }),
   updateBusiness
 );
@@ -79,7 +74,7 @@ router.delete(
   "/:id",
   requireAuth,
   rateLimit({ name: "businesses.delete", max: 10, windowSec: 60 }),
-  validate({ params: businessIdParamSchema }),
+  validate({ params: legacy.businessIdParamSchema }),
   deleteBusiness
 );
 

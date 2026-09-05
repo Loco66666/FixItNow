@@ -9,7 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import type { User } from "@fixitnow/types";
+import type { User } from "@fixitnow/types/legacy";
 import { api, ApiError, setAccessToken } from "./apiClient";
 
 export type AuthStatus = "loading" | "authenticated" | "unauthenticated";
