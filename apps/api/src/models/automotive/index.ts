@@ -6,6 +6,8 @@ export { ProfessionalSkill } from "./ProfessionalSkill";
 export { ServiceArea } from "./ServiceArea";
 export { Availability } from "./Availability";
 export { Intervention } from "./Intervention";
+export { InterventionStatusHistory } from "./InterventionStatusHistory";
+export { InterventionType } from "./InterventionType";
 export { InterventionOffer } from "./InterventionOffer";
 export { Diagnosis } from "./Diagnosis";
 export { Quote } from "./Quote";

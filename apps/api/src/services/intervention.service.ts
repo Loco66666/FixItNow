@@ -1,5 +1,9 @@
 import { Types } from "mongoose";
-import { InterventionStatus, InterventionUrgency } from "@fixitnow/types";
+import {
+  InterventionLocationContext,
+  InterventionStatus,
+  InterventionUrgency,
+} from "@fixitnow/types";
 
 import { User } from "../models/User";
 import { Vehicle } from "../models/automotive/Vehicle";
@@ -11,6 +15,7 @@ export interface CreateInterventionInput {
   customerId: string;
   vehicleId: string;
   urgency?: InterventionUrgency;
+  locationContext?: InterventionLocationContext;
   title: string;
   description: string;
   address: string;
@@ -19,7 +24,7 @@ export interface CreateInterventionInput {
   latitude: number;
   longitude: number;
   services?: string[];
-  currency: string;
+  currency?: string;
   scheduledAt?: Date;
 }
 
@@ -73,9 +78,13 @@ export async function createIntervention(input: CreateInterventionInput) {
       coordinates: [input.longitude, input.latitude],
     },
     services: input.services ?? [],
-    currency: input.currency.toUpperCase(),
+    // Single-currency launch: the platform prices interventions in EUR only.
+    // Clients may still send a currency code, but it is ignored until
+    // multi-currency support is actually needed.
+    currency: (input.currency ?? "EUR").toUpperCase(),
     requestedAt: new Date(),
     scheduledAt: input.scheduledAt,
+    locationContext: input.locationContext ?? InterventionLocationContext.HOME,
   });
 
   try {

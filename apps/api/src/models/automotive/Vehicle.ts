@@ -34,7 +34,6 @@ const vehicleSchema = new Schema<VehicleDoc>(
       trim: true,
       uppercase: true,
       maxlength: 20,
-      index: true,
     },
     vin: {
       type: String,

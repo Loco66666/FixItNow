@@ -45,13 +45,13 @@
 
 ## 3. Incohérences à corriger (bloquantes ou presque)
 
-1. **Router interventions non monté** : ajouter `app.use("/interventions", interventionsRouter)` dans `app.ts` (+ tests).
-2. **Rôles divergents** : `User.role` = `user|owner|admin` (legacy) vs `UserRole` = `CUSTOMER|PROFESSIONAL|ADMIN` (nouveau). `requireAuth` typé sur `legacy.UserRole`. Décision PHASE 02 : migrer User vers les nouveaux rôles, ou mapper. À trancher explicitement avant d'écrire le matching.
-3. **Zod dupliqué** : `interventions.routes.ts` re-déclare les schémas (ex. enum urgence) au lieu d'importer depuis `@fixitnow/types`. Déplacer les schémas dans le package partagé.
-4. **OpenAPI** : n'enregistre que les schémas legacy → les routes automotive n'apparaîtront pas dans `/api/docs` tant que les types ne sont pas en Zod.
-5. **`models/index.ts` + `seed.ts`** : n'exposent que le legacy ; les modèles automotive ne sont pas ré-exportés au niveau racine ni seedés.
-6. `currency` fourni par le client à la création d'intervention → forcer `EUR` côté serveur par défaut.
-7. Pas de champ **contexte de lieu** (DOMICILE/PARKING/ROUTE/AUTOROUTE...) ni de statut pro `AUTHORIZED_HIGHWAY_PROVIDER` — exigence légale dépannage autoroute (tarifs réglementés).
+1. ~~**Router interventions non monté**~~ ✅ **RÉSOLU (PHASE 02)** : `app.use("/interventions", interventionsRouter)` monté + 9 tests.
+2. ~~**Rôles divergents**~~ ✅ **RÉSOLU (PHASE 02)** : décision actée = mapping, pas migration immédiate. `AuthContext.domainRole: UserRole` (CUSTOMER/PROFESSIONAL/ADMIN) via `mapLegacyUserRole()` dans `packages/types/src/user.ts`. Le User document et les JWT gardent les rôles legacy tant que le legacy est gelé ; tout nouveau module automotive doit consommer `domainRole`.
+3. ~~**Zod dupliqué**~~ ✅ **RÉSOLU (PHASE 02)** : `packages/types/src/intervention-schemas.ts` (createInterventionSchema, interventionListQuerySchema, interventionIdParamSchema) consommé par `interventions.routes.ts`.
+4. **OpenAPI** : ⏳ reste à faire — les types automotive ne sont pas tous en Zod.
+5. ~~**`models/index.ts`**~~ ✅ **RÉSOLU (PHASE 02)** : ré-exports automotive au niveau racine.
+6. ~~`currency` fourni par le client~~ ✅ **RÉSOLU (PHASE 02)** : défaut `EUR` forcé côté serveur.
+7. ~~**Contexte de lieu**~~ ✅ **RÉSOLU (PHASE 02)** : `InterventionLocationContext` (HOME/PARKING/ROAD/BUSINESS/HIGHWAY/EXPRESS_ROAD) sur le modèle + `InterventionType` (catalogue, slug unique). ⏳ La règle "pros autorisés autoroute" s'appliquera en PHASE 04/05 avec `Professional.isHighwayAuthorized` (à créer).
 8. CI désormais sur `automotive-platform` (commit `5e30984`) ✅.
 
 ## 4. Modèle de données cible (conforme au cahier des charges)

@@ -2,11 +2,13 @@ import type { NextFunction, Request, Response } from "express";
 import { JsonWebTokenError, TokenExpiredError } from "jsonwebtoken";
 import { AppError } from "../utils/AppError";
 import { verifyAccessToken } from "../services/tokens";
-import type { legacy } from "@fixitnow/types";
+import { mapLegacyUserRole, type UserRole, type legacy } from "@fixitnow/types";
 
 export interface AuthContext {
   userId: string;
   role: legacy.UserRole;
+  /** Automotive domain role, mapped from the legacy JWT role. */
+  domainRole: UserRole;
 }
 
 declare global {
@@ -32,7 +34,11 @@ export function requireAuth(req: Request, _res: Response, next: NextFunction) {
 
   try {
     const payload = verifyAccessToken(token);
-    req.auth = { userId: payload.sub, role: payload.role };
+    req.auth = {
+      userId: payload.sub,
+      role: payload.role,
+      domainRole: mapLegacyUserRole(payload.role),
+    };
     next();
   } catch (err) {
     if (err instanceof TokenExpiredError) {

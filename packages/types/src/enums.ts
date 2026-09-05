@@ -17,6 +17,20 @@ export enum InterventionUrgency {
   EMERGENCY = "EMERGENCY",
 }
 
+/**
+ * Where the intervention physically takes place. Matters for legal/pricing
+ * rules: on highways and express roads only authorized providers may attend,
+ * and regulated tariffs apply.
+ */
+export enum InterventionLocationContext {
+  HOME = "HOME",
+  PARKING = "PARKING",
+  ROAD = "ROAD",
+  BUSINESS = "BUSINESS",
+  HIGHWAY = "HIGHWAY",
+  EXPRESS_ROAD = "EXPRESS_ROAD",
+}
+
 export enum InterventionStatus {
   REQUESTED = "REQUESTED",
   SEARCHING = "SEARCHING",

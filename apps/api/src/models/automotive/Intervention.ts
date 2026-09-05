@@ -1,6 +1,7 @@
 import { Schema, model, Types, type Model } from "mongoose";
 import {
   CurrencyCode,
+  InterventionLocationContext,
   InterventionStatus,
   InterventionUrgency,
 } from "@fixitnow/types";
@@ -19,6 +20,7 @@ export interface InterventionDoc {
   professional?: Types.ObjectId;
   status: InterventionStatus;
   urgency: InterventionUrgency;
+  locationContext: InterventionLocationContext;
   title: string;
   description: string;
   location: InterventionLocation;
@@ -63,6 +65,13 @@ const interventionSchema = new Schema<InterventionDoc>(
       enum: Object.values(InterventionUrgency),
       required: true,
       default: InterventionUrgency.NORMAL,
+      index: true,
+    },
+    locationContext: {
+      type: String,
+      enum: Object.values(InterventionLocationContext),
+      required: true,
+      default: InterventionLocationContext.HOME,
       index: true,
     },
     title: {
@@ -158,6 +167,7 @@ interventionSchema.index({ vehicle: 1, createdAt: -1 });
 interventionSchema.index({ professional: 1, createdAt: -1 });
 interventionSchema.index({ status: 1, requestedAt: -1 });
 interventionSchema.index({ urgency: 1, requestedAt: -1 });
+interventionSchema.index({ locationContext: 1, requestedAt: -1 });
 interventionSchema.index({
   "location.coordinates": "2dsphere",
 });
