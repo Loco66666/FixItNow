@@ -11,6 +11,12 @@ export enum ProfessionalType {
   SPECIALIST = "SPECIALIST",
 }
 
+export enum InterventionUrgency {
+  NORMAL = "NORMAL",
+  URGENT = "URGENT",
+  EMERGENCY = "EMERGENCY",
+}
+
 export enum InterventionStatus {
   REQUESTED = "REQUESTED",
   SEARCHING = "SEARCHING",
@@ -85,7 +91,6 @@ export enum PaymentStatus {
 
 export enum MessageType {
   TEXT = "TEXT",
-  IMAGE = "IMAGE",
   FILE = "FILE",
   SYSTEM = "SYSTEM",
 }

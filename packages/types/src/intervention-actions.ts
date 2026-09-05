@@ -1,4 +1,4 @@
-﻿import type { ISODateString, ObjectIdString } from "./common";
+import type { ISODateString, ObjectIdString } from "./common";
 
 export interface AcceptInterventionAction {
   interventionId: ObjectIdString;

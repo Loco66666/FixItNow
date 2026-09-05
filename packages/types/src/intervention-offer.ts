@@ -1,8 +1,7 @@
-﻿import type { ISODateString, ObjectIdString } from "./common";
+import type { CurrencyCode, ISODateString, ObjectIdString } from "./common";
 import type { InterventionOfferStatus } from "./enums";
 
 export interface InterventionOffer {
-  id: ObjectIdString;
   interventionId: ObjectIdString;
   professionalId: ObjectIdString;
   status: InterventionOfferStatus;
@@ -11,7 +10,7 @@ export interface InterventionOffer {
   respondedAt?: ISODateString;
   estimatedArrivalAt?: ISODateString;
   estimatedPayoutCents: number;
-  currency: string;
+  currency: CurrencyCode;
   createdAt: ISODateString;
   updatedAt: ISODateString;
 }

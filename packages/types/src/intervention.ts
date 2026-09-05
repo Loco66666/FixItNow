@@ -1,5 +1,5 @@
-﻿import type { ISODateString, ObjectIdString } from "./common";
-import type { InterventionStatus } from "./enums";
+import type { CurrencyCode, ISODateString, ObjectIdString } from "./common";
+import type { InterventionStatus, InterventionUrgency } from "./enums";
 
 export interface InterventionLocation {
   address: string;
@@ -14,9 +14,12 @@ export interface Intervention {
   customerId: ObjectIdString;
   vehicleId: ObjectIdString;
   status: InterventionStatus;
+  urgency: InterventionUrgency;
   title: string;
   description: string;
   location: InterventionLocation;
+  services: string[];
+  currency: CurrencyCode;
   requestedAt: ISODateString;
   scheduledAt?: ISODateString;
   startedAt?: ISODateString;
