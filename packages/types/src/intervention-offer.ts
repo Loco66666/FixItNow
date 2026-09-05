@@ -2,6 +2,7 @@ import type { CurrencyCode, ISODateString, ObjectIdString } from "./common";
 import type { InterventionOfferStatus } from "./enums";
 
 export interface InterventionOffer {
+  id: ObjectIdString;
   interventionId: ObjectIdString;
   professionalId: ObjectIdString;
   status: InterventionOfferStatus;

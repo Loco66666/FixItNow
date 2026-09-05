@@ -1,9 +1,13 @@
-﻿import { Schema, model, Types, type Model } from "mongoose";
+import { Schema, model, Types, type Model } from "mongoose";
+import {
+  CurrencyCode,
+  InterventionStatus,
+  InterventionUrgency,
+} from "@fixitnow/types";
 import { jsonTransform } from "../_transform";
-import { InterventionStatus } from "@fixitnow/types";
 
 export interface InterventionLocation {
-  address?: string;
+  address: string;
   city?: string;
   postalCode?: string;
   coordinates: [number, number];
@@ -12,11 +16,14 @@ export interface InterventionLocation {
 export interface InterventionDoc {
   customer: Types.ObjectId;
   vehicle: Types.ObjectId;
+  professional?: Types.ObjectId;
   status: InterventionStatus;
+  urgency: InterventionUrgency;
   title: string;
   description: string;
   location: InterventionLocation;
-  urgency?: string;
+  services: string[];
+  currency: CurrencyCode;
   requestedAt: Date;
   scheduledAt?: Date;
   startedAt?: Date;
@@ -39,11 +46,23 @@ const interventionSchema = new Schema<InterventionDoc>(
       required: true,
       index: true,
     },
+    professional: {
+      type: Schema.Types.ObjectId,
+      ref: "Professional",
+      index: true,
+    },
     status: {
       type: String,
       enum: Object.values(InterventionStatus),
       required: true,
       default: InterventionStatus.REQUESTED,
+      index: true,
+    },
+    urgency: {
+      type: String,
+      enum: Object.values(InterventionUrgency),
+      required: true,
+      default: InterventionUrgency.NORMAL,
       index: true,
     },
     title: {
@@ -61,6 +80,7 @@ const interventionSchema = new Schema<InterventionDoc>(
     location: {
       address: {
         type: String,
+        required: true,
         trim: true,
         maxlength: 300,
       },
@@ -88,10 +108,21 @@ const interventionSchema = new Schema<InterventionDoc>(
         },
       },
     },
-    urgency: {
+    services: {
+      type: [String],
+      required: true,
+      default: [],
+      validate: {
+        validator: (value: string[]) => value.length <= 50,
+        message: "An intervention cannot contain more than 50 services.",
+      },
+    },
+    currency: {
       type: String,
-      trim: true,
-      maxlength: 50,
+      required: true,
+      uppercase: true,
+      minlength: 3,
+      maxlength: 3,
     },
     requestedAt: {
       type: Date,
@@ -116,6 +147,7 @@ const interventionSchema = new Schema<InterventionDoc>(
       transform: jsonTransform({
         customer: "customerId",
         vehicle: "vehicleId",
+        professional: "professionalId",
       }),
     },
   }
@@ -123,7 +155,9 @@ const interventionSchema = new Schema<InterventionDoc>(
 
 interventionSchema.index({ customer: 1, createdAt: -1 });
 interventionSchema.index({ vehicle: 1, createdAt: -1 });
+interventionSchema.index({ professional: 1, createdAt: -1 });
 interventionSchema.index({ status: 1, requestedAt: -1 });
+interventionSchema.index({ urgency: 1, requestedAt: -1 });
 interventionSchema.index({
   "location.coordinates": "2dsphere",
 });
