@@ -18,6 +18,8 @@ export interface ProfessionalDoc {
   verificationStatus: VerificationStatus;
   location?: ProfessionalLocation;
   isActive: boolean;
+  isHighwayAuthorized: boolean;
+  hourlyRateCents?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -96,6 +98,22 @@ const professionalSchema = new Schema<ProfessionalDoc>(
       type: Boolean,
       default: false,
       index: true,
+    },
+    // Highway/express-road attendances are legally restricted to authorized
+    // providers (regulated tariffs). Default false; admin-verified only.
+    isHighwayAuthorized: {
+      type: Boolean,
+      required: true,
+      default: false,
+      index: true,
+    },
+    // Advertised hourly rate in cents, used by the price component of the
+    // matching score. Optional: providers without one get a neutral price
+    // score instead of being excluded.
+    hourlyRateCents: {
+      type: Number,
+      min: 0,
+      max: 10_000_00,
     },
   },
   {

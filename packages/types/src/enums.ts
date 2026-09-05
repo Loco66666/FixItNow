@@ -62,6 +62,19 @@ export enum InterventionOfferStatus {
   CANCELLED = "CANCELLED",
 }
 
+/**
+ * Lifecycle of a matching candidate row produced by the matching engine
+ * (PHASE 04). A re-run of the matching supersedes stale PENDING rows.
+ */
+export enum MatchCandidateStatus {
+  PENDING = "PENDING",
+  NOTIFIED = "NOTIFIED",
+  ACCEPTED = "ACCEPTED",
+  DECLINED = "DECLINED",
+  EXPIRED = "EXPIRED",
+  SUPERSEDED = "SUPERSEDED",
+}
+
 export enum AvailabilityStatus {
   AVAILABLE_NOW = "AVAILABLE_NOW",
   AVAILABLE_SOON = "AVAILABLE_SOON",

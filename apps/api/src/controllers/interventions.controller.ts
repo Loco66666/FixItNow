@@ -5,6 +5,10 @@ import {
   getInterventionStatusHistory,
   listCustomerInterventions,
 } from "../services/intervention.service";
+import {
+  listMatchingCandidates,
+  runMatchingForIntervention,
+} from "../services/matching.service";
 
 export async function createInterventionController(
   req: Request,
@@ -84,6 +88,44 @@ export async function getInterventionHistoryController(
     );
 
     res.json({ data: history });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function runMatchingController(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    if (!req.auth) throw new Error("Missing auth context");
+
+    const candidates = await runMatchingForIntervention(
+      req.params.id,
+      req.auth.userId
+    );
+
+    res.json({ data: candidates });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getMatchingCandidatesController(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    if (!req.auth) throw new Error("Missing auth context");
+
+    const candidates = await listMatchingCandidates(
+      req.params.id,
+      req.auth.userId
+    );
+
+    res.json({ data: candidates });
   } catch (error) {
     next(error);
   }

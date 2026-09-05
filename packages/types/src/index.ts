@@ -14,6 +14,7 @@ export * from "./intervention-schemas";
 export * from "./intervention-actions";
 export * from "./intervention-offer";
 export * from "./intervention-type";
+export * from "./matching";
 export * from "./diagnosis";
 export * from "./quote";
 export * from "./payment";

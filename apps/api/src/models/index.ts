@@ -18,6 +18,7 @@ export {
   InterventionStatusHistory,
   InterventionType,
   InterventionOffer,
+  MatchingCandidate,
   Diagnosis,
   Quote,
   QuoteItem,

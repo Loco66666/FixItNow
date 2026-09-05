@@ -9,6 +9,7 @@ export { Intervention } from "./Intervention";
 export { InterventionStatusHistory } from "./InterventionStatusHistory";
 export { InterventionType } from "./InterventionType";
 export { InterventionOffer } from "./InterventionOffer";
+export { MatchingCandidate } from "./MatchingCandidate";
 export { Diagnosis } from "./Diagnosis";
 export { Quote } from "./Quote";
 export { QuoteItem } from "./QuoteItem";
