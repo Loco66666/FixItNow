@@ -11,6 +11,7 @@ import { makeUser } from "./helpers/auth";
 import { Vehicle } from "../src/models/automotive/Vehicle";
 import type { VehicleDoc } from "../src/models/automotive/Vehicle";
 import { InterventionStatusHistory } from "../src/models/automotive/InterventionStatusHistory";
+import { Intervention } from "../src/models/automotive/Intervention";
 
 const app = createApp();
 
@@ -207,5 +208,29 @@ describe("GET /interventions/:id/history", () => {
       .set("Authorization", `Bearer ${b.accessToken}`);
 
     expect(res.status).toBe(404);
+  });
+});
+
+describe("interventions creation rollback", () => {
+  it("rolls back the intervention when the history write fails", async () => {
+    const user = await makeUser({ role: "user" });
+    const vehicle = await seedOwnedVehicle(user.id);
+
+    const createSpy = jest
+      .spyOn(InterventionStatusHistory, "create")
+      .mockRejectedValueOnce(new Error("history write failed"));
+
+    const res = await request(app)
+      .post("/interventions")
+      .set("Authorization", `Bearer ${user.accessToken}`)
+      .send(createPayload(String(vehicle._id)));
+
+    // The service deletes the orphan intervention and rethrows.
+    expect(res.status).toBe(500);
+
+    const remaining = await Intervention.countDocuments();
+    expect(remaining).toBe(0);
+
+    createSpy.mockRestore();
   });
 });

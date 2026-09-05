@@ -114,7 +114,7 @@ Créée, non montée : `/interventions` (POST, GET /mine, GET /:id, GET /:id/his
 
 - **PHASE 01 — GEL ARCHITECTURAL (DÉCIDÉ)** : frontend Next.js 14 App Router ✅ / backend Express ✅ / DB MongoDB ✅ / auth JWT+Redis ✅ / payments Stripe / storage et realtime à trancher en PHASE 05. **Ne PAS migrer vers TanStack/Lovable** : le stack Express/Mongo existant est sain, testé (59/59) et déployé (Vercel/Render/Atlas/Upstash). Lovable reste optionnel pour le prototypage d'interface uniquement.
 - **PHASE 02 (domain model)** : résoudre l'incohérence rôles (n°2), créer `InterventionType`, monter `/interventions` dans `app.ts` (n°1), Zod partagé (n°3), ré-exports automotive (n°5), `locationContext` (n°7).
-- **PHASE 03** : tests interventions (section 7) + routes vehicles + seed automotive.
+- **PHASE 03 (FAIT — commit PHASE 03)** : routes `/vehicles` (POST, GET /mine, GET /:id, PATCH /:id, DELETE /:id) avec ownership vérifié, doublons immat/VIN → 409 ; schémas Zod partagés `vehicle-schemas.ts` ; seed automotive idempotent (14 types d'intervention, 2 véhicules démo, 1 intervention REQUESTED) ; 14 nouveaux tests (82/82) dont le rollback création+historique.
 - **PHASE 04** : matching (scoring + candidats + TTL).
 - **PHASE 05** : actions pro (accept/en-route/arrive/diagnose/complete), tracking temps réel, `ProviderRealtimeStatus`, décision storage/realtime.
 - **PHASE 06** : quotes/quote_items API.

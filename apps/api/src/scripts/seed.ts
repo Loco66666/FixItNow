@@ -16,6 +16,97 @@ import { User } from "../models/User";
 import { Category, slugify } from "../models/Category";
 import { Business } from "../models/Business";
 import { Review } from "../models/Review";
+import {
+  Intervention,
+  InterventionStatusHistory,
+  InterventionType,
+  Vehicle,
+} from "../models/automotive";
+import { InterventionStatus } from "@fixitnow/types";
+
+interface InterventionTypeSeed {
+  name: string;
+  slug: string;
+  description: string;
+}
+
+/**
+ * Normalized intervention catalog (PHASE 02 model). Customers may still
+ * describe their problem in free text; this catalog structures the request
+ * once the matching engine (PHASE 04) needs it.
+ */
+const INTERVENTION_TYPES: InterventionTypeSeed[] = [
+  {
+    name: "Diagnostic",
+    slug: "diagnostic",
+    description: "Lecture des codes défauts et diagnostic électronique.",
+  },
+  {
+    name: "Batterie",
+    slug: "batterie",
+    description: "Test, recharge et remplacement de batterie.",
+  },
+  {
+    name: "Démarrage",
+    slug: "demarrage",
+    description: "Pannes de démarrage, démarreur, alternateur.",
+  },
+  {
+    name: "Freins",
+    slug: "freins",
+    description: "Plaquettes, disques, étriers, liquide de frein.",
+  },
+  {
+    name: "Pneus",
+    slug: "pneus",
+    description: "Montage, équilibrage, permutation, crevaisons.",
+  },
+  {
+    name: "Vidange",
+    slug: "vidange",
+    description: "Vidange moteur et remplacement des filtres.",
+  },
+  {
+    name: "Révision",
+    slug: "revision",
+    description: "Révision constructeur périodique.",
+  },
+  {
+    name: "Embrayage",
+    slug: "embrayage",
+    description: "Remplacement d'embrayage et volant moteur.",
+  },
+  {
+    name: "Distribution",
+    slug: "distribution",
+    description: "Courroie ou chaîne de distribution.",
+  },
+  {
+    name: "Climatisation",
+    slug: "climatisation",
+    description: "Recharge, entretien et réparation de clim.",
+  },
+  {
+    name: "Électricité",
+    slug: "electricite",
+    description: "Recherche de pannes électriques et éclairage.",
+  },
+  {
+    name: "Panne électronique",
+    slug: "panne-electronique",
+    description: "Capteurs, calculateurs, boîtiers.",
+  },
+  {
+    name: "Carrosserie",
+    slug: "carrosserie",
+    description: "Petites réparations et remise en état.",
+  },
+  {
+    name: "Remorquage",
+    slug: "remorquage",
+    description: "Dépannage et remorquage du véhicule.",
+  },
+];
 
 interface CategorySeed {
   name: string;
@@ -287,6 +378,10 @@ async function seed({ reset }: { reset: boolean }): Promise<void> {
       Category.deleteMany({}),
       Business.deleteMany({}),
       Review.deleteMany({}),
+      InterventionType.deleteMany({}),
+      Vehicle.deleteMany({}),
+      Intervention.deleteMany({}),
+      InterventionStatusHistory.deleteMany({}),
     ]);
   }
 
@@ -444,6 +539,111 @@ async function seed({ reset }: { reset: boolean }): Promise<void> {
       },
       { upsert: true }
     );
+  }
+
+  // --- Automotive: intervention type catalog ---
+  // Idempotent upsert by slug; the unique index on `slug` guarantees no
+  // duplicates even across concurrent runs.
+  let typeCount = 0;
+  for (const t of INTERVENTION_TYPES) {
+    const res = await InterventionType.updateOne(
+      { slug: t.slug },
+      {
+        $setOnInsert: {
+          name: t.name,
+          slug: t.slug,
+          description: t.description,
+        },
+      },
+      { upsert: true }
+    );
+    if (res.upsertedCount > 0) typeCount += 1;
+  }
+  logger.info(
+    { inserted: typeCount, total: INTERVENTION_TYPES.length },
+    "Seeded intervention types"
+  );
+
+  // --- Automotive: demo customer vehicles ---
+  if (demoUser) {
+    const demoVehicles = [
+      {
+        owner: demoUser._id,
+        registrationNumber: "AB-123-CD",
+        make: "Renault",
+        model: "Clio IV",
+        version: "1.5 dCi 90 Energy",
+        year: 2019,
+        fuelType: "Diesel",
+        transmission: "Manuelle",
+        mileageKm: 87400,
+        vehicleType: "Citadine",
+      },
+      {
+        owner: demoUser._id,
+        registrationNumber: "EF-456-GH",
+        make: "Peugeot",
+        model: "3008",
+        version: "1.2 PureTech 130 Allure",
+        year: 2021,
+        fuelType: "Essence",
+        transmission: "Automatique",
+        mileageKm: 42100,
+        vehicleType: "SUV",
+      },
+    ];
+
+    let vehicleCount = 0;
+    for (const v of demoVehicles) {
+      const res = await Vehicle.updateOne(
+        { registrationNumber: v.registrationNumber },
+        { $setOnInsert: v },
+        { upsert: true }
+      );
+      if (res.upsertedCount > 0) vehicleCount += 1;
+    }
+    logger.info(
+      { inserted: vehicleCount, total: demoVehicles.length },
+      "Seeded demo vehicles"
+    );
+
+    // --- Automotive: one REQUESTED intervention so dashboards are alive ---
+    const clio = await Vehicle.findOne({
+      registrationNumber: "AB-123-CD",
+    });
+    if (clio) {
+      const existingIntervention = await Intervention.exists({
+        vehicle: clio._id,
+        status: InterventionStatus.REQUESTED,
+      });
+      if (!existingIntervention) {
+        const intervention = await Intervention.create({
+          customer: demoUser._id,
+          vehicle: clio._id,
+          status: InterventionStatus.REQUESTED,
+          urgency: "URGENT",
+          locationContext: "PARKING",
+          title: "La voiture ne démarre plus",
+          description:
+            "Batterie à plat, je suis dans un parking sous-terrain à Limoges.",
+          location: {
+            address: "Place de la République",
+            city: "Limoges",
+            postalCode: "87000",
+            coordinates: [1.2611, 45.8336],
+          },
+          services: ["Batterie", "Démarrage"],
+          currency: "EUR",
+          requestedAt: new Date(),
+        });
+        await InterventionStatusHistory.create({
+          intervention: intervention._id,
+          toStatus: InterventionStatus.REQUESTED,
+          reason: "Intervention created (seed)",
+        });
+        logger.info("Seeded demo intervention");
+      }
+    }
   }
 
   // --- Recompute denormalised ratings on each business ---

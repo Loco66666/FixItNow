@@ -3,6 +3,7 @@ export * from "./enums";
 export * from "./auth";
 export * from "./user";
 export * from "./vehicle";
+export * from "./vehicle-schemas";
 export * from "./professional";
 export * from "./garage";
 export * from "./skill";

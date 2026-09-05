@@ -17,6 +17,7 @@ import businessesRouter from "./routes/businesses";
 import bookingsRouter from "./routes/bookings";
 import reviewsRouter from "./routes/reviews";
 import interventionsRouter from "./routes/interventions.routes";
+import vehiclesRouter from "./routes/vehicles.routes";
 import { openApiSpec } from "./openapi";
 
 export function createApp(): Express {
@@ -58,6 +59,7 @@ export function createApp(): Express {
   app.use("/bookings", bookingsRouter);
   app.use("/reviews", reviewsRouter);
   app.use("/interventions", interventionsRouter);
+  app.use("/vehicles", vehiclesRouter);
 
   // OpenAPI / Swagger UI
   app.get("/api/docs.json", (_req, res) => res.json(openApiSpec));
