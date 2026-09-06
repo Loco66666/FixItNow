@@ -83,6 +83,19 @@ export enum AvailabilityStatus {
   UNAVAILABLE = "UNAVAILABLE",
 }
 
+/**
+ * Real-time operational status of a professional. Distinct from the declared
+ * `Availability` schedule: written by the provider app and by the intervention
+ * lifecycle (e.g. ON_INTERVENTION while a job is accepted).
+ */
+export enum ProviderRealtimeStatus {
+  OPEN = "OPEN",
+  BUSY = "BUSY",
+  OFFLINE = "OFFLINE",
+  PAUSED = "PAUSED",
+  ON_INTERVENTION = "ON_INTERVENTION",
+}
+
 export enum VerificationStatus {
   NOT_STARTED = "NOT_STARTED",
   IN_PROGRESS = "IN_PROGRESS",

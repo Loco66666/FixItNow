@@ -3,9 +3,12 @@ import {
   AvailabilityStatus,
   InterventionStatus,
   MatchCandidateStatus,
+  ProviderRealtimeStatus as ProviderRealtimeStatusEnum,
   VerificationStatus,
 } from "@fixitnow/types";
+import type { InterventionEvent } from "@fixitnow/types";
 
+import { logger } from "../config/logger";
 import { Intervention } from "../models/automotive/Intervention";
 import { Professional } from "../models/automotive/Professional";
 import { ServiceArea } from "../models/automotive/ServiceArea";
@@ -17,6 +20,8 @@ import { InterventionStatusHistory } from "../models/automotive/InterventionStat
 import { AppError } from "../utils/AppError";
 import { haversineKm, scoreProvider } from "./matching-score";
 import type { ScoreProviderResult } from "./matching-score";
+import { publishInterventionEvent } from "./intervention-events";
+import { setProviderRealtimeStatusForUser } from "./provider-realtime.service";
 
 const MATCHABLE_STATUSES = [
   InterventionStatus.REQUESTED,
@@ -438,7 +443,6 @@ export async function acceptCandidate(input: AcceptCandidateInput) {
   }
 
   // (3) Audit trail (best-effort; state transition is the source of truth).
-  // TODO(PHASE 05.2): emit an "intervention.accepted" event for SSE streaming.
   try {
     await InterventionStatusHistory.create({
       intervention: interventionId,
@@ -449,6 +453,33 @@ export async function acceptCandidate(input: AcceptCandidateInput) {
     });
   } catch {
     /* audit log is best-effort */
+  }
+
+  // (4) Real-time fan-out (best-effort): stream the accept to the intervention
+  // SSE channel and flip the provider's real-time status to ON_INTERVENTION.
+  const acceptedEvent: InterventionEvent = {
+    type: "intervention.accepted",
+    interventionId: interventionId.toHexString(),
+    data: {
+      candidateId: candidateId.toHexString(),
+      professionalId: proId.toHexString(),
+      status: InterventionStatus.ACCEPTED,
+      acceptedAt: now.toISOString(),
+      startedAt: now.toISOString(),
+    },
+    emittedAt: now.toISOString(),
+  };
+  await publishInterventionEvent(acceptedEvent);
+  try {
+    await setProviderRealtimeStatusForUser(
+      input.professionalUserId,
+      ProviderRealtimeStatusEnum.ON_INTERVENTION
+    );
+  } catch (err) {
+    logger.warn(
+      { err: { message: (err as Error)?.message } },
+      "provider realtime status flip failed"
+    );
   }
 
   return {
