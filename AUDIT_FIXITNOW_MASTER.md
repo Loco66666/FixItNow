@@ -129,6 +129,7 @@ Créée, non montée : `/interventions` (POST, GET /mine, GET /:id, GET /:id/his
 
 ## 9. Dette & hygiène (fil rouge)
 
+- ~~Seed : les comptes démo ne pouvaient pas se connecter (mots de passe en clair)~~ ✅ **CORRIGÉ** : le seed utilisait `findOneAndUpdate` + `$setOnInsert`, qui contourne le hook Mongoose `pre('save')` de bcrypt (`User.ts`) → mots de passe stockés en clair → login 401. Remplacé par un helper `seedUser()` qui passe par `User.create()`/`save()` (hook exécuté) et **répare** les records déjà corrompus (détection `$2a$` + re-hash). Ajout d'un **pro démo** `pro@fixitnow.dev` / `Pro#12345` (profil "Garage Limoges Demo" APPROVED + AVAILABLE_NOW) pour que le matching→accept soit jouable de bout en bout ; smoke script `apps/api/smoke-test.mjs` (13 checks) documenté dans le README.
 - Nettoyer les BOM en tête de fichiers ; ajouter `.gitattributes` (`* text=auto eol=lf`) pour stabiliser LF/CRLF.
 - **Backlog perf (PHASE 04)** :
   - `matching.service.ts` — lever la limite `.limit(200)` arbitraire : remplacer par une cap `./MAX_MATCHING_POOL` configurable (env `MATCHING_POOL_LIMIT`, défaut 200) ; alerter métriques quand atteint. Priorité moyenne (impacte les zones denses >200 pros éligibles).

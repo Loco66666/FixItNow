@@ -9,6 +9,7 @@
  * handful of reviews so ratingAvg is non-zero in the UI.
  */
 import mongoose, { Types } from "mongoose";
+import bcrypt from "bcryptjs";
 import { env } from "../config/env";
 import { logger } from "../config/logger";
 import { connectMongo, disconnectMongo } from "../config/db";
@@ -17,9 +18,11 @@ import { Category, slugify } from "../models/Category";
 import { Business } from "../models/Business";
 import { Review } from "../models/Review";
 import {
+  Availability,
   Intervention,
   InterventionStatusHistory,
   InterventionType,
+  Professional,
   Vehicle,
 } from "../models/automotive";
 import { InterventionStatus } from "@fixitnow/types";
@@ -385,58 +388,105 @@ async function seed({ reset }: { reset: boolean }): Promise<void> {
     ]);
   }
 
-  // --- Users ---
-  const adminEmail = "admin@fixitnow.dev";
-  const customerEmail = "demo@fixitnow.dev";
-  const ownerEmail = "owner@fixitnow.dev";
+  /**
+   * Idempotent user seed that respects the bcrypt pre-save hook on `User`.
+   *
+   * The previous `findOneAndUpdate` + `$setOnInsert` pattern bypassed that hook
+   * (Mongoose does not run document middleware on upserts), so passwords were
+   * stored in plaintext and logins returned 401. This helper instead:
+   *   - creates the user via `User.create()` when missing (hook runs), or
+   *   - re-hashes + saves when the stored password is not a valid bcrypt hash
+   *     (repairs records left by the old pattern).
+   */
+  async function seedUser(attrs: {
+    name: string;
+    email: string;
+    password: string;
+    role: "user" | "owner" | "admin";
+  }) {
+    const existing = await User.findOne({ email: attrs.email })
+      .select("+password")
+      .lean();
+    if (!existing) {
+      const created = await User.create(attrs);
+      return created;
+    }
+    const isHashed = existing.password?.startsWith("$2a$");
+    if (!isHashed) {
+      await User.updateOne(
+        { _id: existing._id },
+        { $set: { password: await bcrypt.hash(attrs.password, 12) } }
+      );
+    }
+    return User.findOne({ email: attrs.email }).lean();
+  }
 
-  const [admin, demoUser, owner] = await Promise.all([
-    User.findOneAndUpdate(
-      { email: adminEmail },
-      {
-        $setOnInsert: {
-          name: "FixItNow Admin",
-          email: adminEmail,
-          password: "Admin#12345",
-          role: "admin",
-        },
-      },
-      { new: true, upsert: true, runValidators: true }
-    ),
-    User.findOneAndUpdate(
-      { email: customerEmail },
-      {
-        $setOnInsert: {
-          name: "Demo Customer",
-          email: customerEmail,
-          password: "Demo#12345",
-          role: "user",
-        },
-      },
-      { new: true, upsert: true, runValidators: true }
-    ),
-    User.findOneAndUpdate(
-      { email: ownerEmail },
-      {
-        $setOnInsert: {
-          name: "Demo Owner",
-          email: ownerEmail,
-          password: "Owner#12345",
-          role: "owner",
-        },
-      },
-      { new: true, upsert: true, runValidators: true }
-    ),
-  ]);
+  // --- Users ---
+  // NOTE: seedUser() uses User.create()/save() so the bcrypt pre-save hook runs.
+  // The old findOneAndUpdate + $setOnInsert pattern bypassed that hook and stored
+  // passwords in plaintext (logins returned 401). seedUser() also repairs such
+  // records. Demo passwords match the README; rotate before any non-local use.
+  await seedUser({
+    name: "FixItNow Admin",
+    email: "admin@fixitnow.dev",
+    password: "Admin#12345",
+    role: "admin",
+  });
+  await seedUser({
+    name: "Demo Customer",
+    email: "demo@fixitnow.dev",
+    password: "Demo#12345",
+    role: "user",
+  });
+  await seedUser({
+    name: "Demo Owner",
+    email: "owner@fixitnow.dev",
+    password: "Owner#12345",
+    role: "owner",
+  });
 
   logger.info(
     {
-      admin: admin?.email,
-      customer: demoUser?.email,
-      owner: owner?.email,
+      admin: "admin@fixitnow.dev",
+      customer: "demo@fixitnow.dev",
+      owner: "owner@fixitnow.dev",
     },
     "Seeded users (passwords match the seed file; rotate before prod)"
   );
+
+  // Resolve the seeded users' ids for the downstream fixtures below.
+  const [customerUser, ownerUser] = await Promise.all([
+    User.findOne({ email: "demo@fixitnow.dev" }).select("_id").lean(),
+    User.findOne({ email: "owner@fixitnow.dev" }).select("_id").lean(),
+  ]);
+
+  // --- Automotive: one demo professional so the matching engine has a candidate
+  // (the seeded intervention can actually be matched + accepted end-to-end).
+  const proUser = await seedUser({
+    name: "Demo Pro",
+    email: "pro@fixitnow.dev",
+    password: "Pro#12345",
+    role: "owner",
+  });
+  const proProfile = await Professional.findOne({ user: proUser!._id }).lean();
+  if (!proProfile) {
+    const createdPro = await Professional.create({
+      user: proUser!._id,
+      type: "INDEPENDENT",
+      displayName: "Garage Limoges Demo",
+      serviceRadiusKm: 30,
+      verificationStatus: "APPROVED",
+      isActive: true,
+      isHighwayAuthorized: false,
+      hourlyRateCents: 7000,
+      location: { type: "Point", coordinates: [1.2611, 45.8336] },
+    });
+    await Availability.create({
+      professional: createdPro._id,
+      status: "AVAILABLE_NOW",
+      timezone: "Europe/Paris",
+    });
+  }
 
   // --- Categories ---
   // findOneAndUpdate with $setOnInsert bypasses Mongoose's pre('validate')
@@ -484,7 +534,7 @@ async function seed({ reset }: { reset: boolean }): Promise<void> {
           phone: b.phone,
           images: b.images,
           category: catId,
-          owner: owner!._id,
+          owner: ownerUser!._id,
           location: {
             type: "Point",
             coordinates: [b.longitude, b.latitude],
@@ -528,11 +578,11 @@ async function seed({ reset }: { reset: boolean }): Promise<void> {
     const businessId = businessIdByName.get(r.business);
     if (!businessId) continue;
     await Review.updateOne(
-      { business: businessId, user: demoUser!._id },
+      { business: businessId, user: customerUser!._id },
       {
         $setOnInsert: {
           business: businessId,
-          user: demoUser!._id,
+          user: customerUser!._id,
           rating: r.rating,
           comment: r.comment,
         },
@@ -565,10 +615,10 @@ async function seed({ reset }: { reset: boolean }): Promise<void> {
   );
 
   // --- Automotive: demo customer vehicles ---
-  if (demoUser) {
+  if (customerUser) {
     const demoVehicles = [
       {
-        owner: demoUser._id,
+        owner: customerUser._id,
         registrationNumber: "AB-123-CD",
         make: "Renault",
         model: "Clio IV",
@@ -580,7 +630,7 @@ async function seed({ reset }: { reset: boolean }): Promise<void> {
         vehicleType: "Citadine",
       },
       {
-        owner: demoUser._id,
+        owner: customerUser._id,
         registrationNumber: "EF-456-GH",
         make: "Peugeot",
         model: "3008",
@@ -618,7 +668,7 @@ async function seed({ reset }: { reset: boolean }): Promise<void> {
       });
       if (!existingIntervention) {
         const intervention = await Intervention.create({
-          customer: demoUser._id,
+          customer: customerUser._id,
           vehicle: clio._id,
           status: InterventionStatus.REQUESTED,
           urgency: "URGENT",

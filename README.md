@@ -19,7 +19,10 @@ TypeScript end-to-end. Next.js 14 web, Express + Mongoose + Redis API, shared Zo
 > **Demo accounts** (seeded — rotate before reuse):
 > <br/>• Admin: `admin@fixitnow.dev` / `Admin#12345`
 > <br/>• Customer: `demo@fixitnow.dev` / `Demo#12345`
-> <br/>• Business owner: `owner@fixitnow.dev` / `Owner#12345`
+> <br/>• Business owner (legacy): `owner@fixitnow.dev` / `Owner#12345`
+> <br/>• **Automotive pro**: `pro@fixitnow.dev` / `Pro#12345` (matching candidate — "Garage Limoges Demo", APPROVED, AVAILABLE_NOW)
+>
+> Local smoke check: `cd apps/api && node smoke-test.mjs` (13 checks: health, logins, match → accept → SSE).
 
 ---
 
