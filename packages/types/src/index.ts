@@ -23,6 +23,7 @@ export * from "./payment";
 export * from "./invoice";
 export * from "./review";
 export * from "./conversation";
+export * from "./conversation-schemas";
 export * from "./message";
 export * from "./notification";
 export * from "./verification";

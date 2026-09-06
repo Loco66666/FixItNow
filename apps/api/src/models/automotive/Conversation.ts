@@ -2,6 +2,7 @@
 import { jsonTransform } from "../_transform";
 
 export interface ConversationDoc {
+  _id: Types.ObjectId;
   intervention: Types.ObjectId;
   customer: Types.ObjectId;
   professional: Types.ObjectId;

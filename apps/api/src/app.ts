@@ -20,6 +20,7 @@ import interventionsRouter from "./routes/interventions.routes";
 import vehiclesRouter from "./routes/vehicles.routes";
 import eventsRouter from "./routes/events.routes";
 import paymentsRouter from "./routes/payments.routes";
+import conversationsRouter from "./routes/conversations.routes";
 import { stripeWebhookController } from "./controllers/payments.controller";
 import { openApiSpec } from "./openapi";
 
@@ -73,6 +74,7 @@ export function createApp(): Express {
   app.use("/vehicles", vehiclesRouter);
   app.use("/events", eventsRouter);
   app.use("/payments", paymentsRouter);
+  app.use("/conversations", conversationsRouter);
 
   // OpenAPI / Swagger UI
   app.get("/api/docs.json", (_req, res) => res.json(openApiSpec));

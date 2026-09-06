@@ -3,6 +3,7 @@ import { jsonTransform } from "../_transform";
 import { MessageType } from "@fixitnow/types";
 
 export interface MessageDoc {
+  _id: Types.ObjectId;
   conversation: Types.ObjectId;
   sender: Types.ObjectId;
   type: MessageType;

@@ -3,6 +3,7 @@ import { jsonTransform } from "../_transform";
 import { NotificationType } from "@fixitnow/types";
 
 export interface NotificationDoc {
+  _id: Types.ObjectId;
   user: Types.ObjectId;
   type: NotificationType;
   title: string;

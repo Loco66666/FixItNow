@@ -27,6 +27,7 @@ import {
   runProviderActionController,
 } from "../controllers/interventions.controller";
 import { authorizePaymentController } from "../controllers/payments.controller";
+import { getConversationController } from "../controllers/conversations.controller";
 
 const router = Router();
 
@@ -176,6 +177,19 @@ router.post(
   rateLimit({ name: "payments.authorize", max: 10, windowSec: 60 }),
   validate({ params: interventionIdParamSchema }),
   authorizePaymentController
+);
+
+/**
+ * GET /interventions/:id/conversation
+ *
+ * Get (or lazily create) the 1:1 conversation thread of an intervention.
+ * Participant-only (owner customer or assigned provider) — service-level 403.
+ */
+router.get(
+  "/:id/conversation",
+  requireAuth,
+  validate({ params: interventionIdParamSchema }),
+  getConversationController
 );
 
 export default router;
