@@ -454,3 +454,110 @@ describe("POST /interventions/:id/quote/:quoteId/:decision", () => {
     expect(res.status).toBe(400);
   });
 });
+
+describe("GET /interventions/:id/quotes", () => {
+  /** Setup: devis created by the pro on a DIAGNOSING intervention. */
+  async function setupQuotes(count: number) {
+    const owner = await makeUser({ role: "user" });
+    const intervention = await seedIntervention(owner.id);
+    const pro = await seedPro("Diagnosing Pro");
+
+    await matchAndAccept(String(intervention._id), owner.accessToken, pro);
+    await driveToDiagnosing(String(intervention._id), pro.accessToken);
+
+    const ids: string[] = [];
+    for (let k = 0; k < count; k++) {
+      const created = await request(app)
+        .post(`/interventions/${intervention._id}/quote`)
+        .set("Authorization", `Bearer ${pro.accessToken}`)
+        .send({ items: SAMPLE_ITEMS, notes: `Devis v${k + 1}` });
+      expect(created.status).toBe(201);
+      ids.push(created.body.data.quoteId as string);
+    }
+    return {
+      owner,
+      pro,
+      interventionId: String(intervention._id),
+      quoteIds: ids,
+    };
+  }
+
+  it("requires authentication", async () => {
+    const { interventionId } = await setupQuotes(0);
+    const res = await request(app).get(
+      `/interventions/${interventionId}/quotes`
+    );
+    expect(res.status).toBe(401);
+  });
+
+  it("403s a stranger customer and an unassigned pro", async () => {
+    const { interventionId } = await setupQuotes(0);
+    const stranger = await makeUser({ role: "user" });
+    const outsider = await seedPro("Unassigned Pro");
+
+    const asStranger = await request(app)
+      .get(`/interventions/${interventionId}/quotes`)
+      .set("Authorization", `Bearer ${stranger.accessToken}`);
+    expect(asStranger.status).toBe(403);
+
+    const asOutsider = await request(app)
+      .get(`/interventions/${interventionId}/quotes`)
+      .set("Authorization", `Bearer ${outsider.accessToken}`);
+    expect(asOutsider.status).toBe(403);
+  });
+
+  it("returns the devis list (newest first, with items) for the owner", async () => {
+    const { owner, pro, interventionId, quoteIds } = await setupQuotes(1);
+
+    // A second devis requires a full pricing loop: reject v1 (back to
+    // DIAGNOSING), then have the pro submit v2.
+    const reject = await request(app)
+      .post(`/interventions/${interventionId}/quote/${quoteIds[0]}/reject`)
+      .set("Authorization", `Bearer ${owner.accessToken}`);
+    expect(reject.status).toBe(200);
+
+    const created2 = await request(app)
+      .post(`/interventions/${interventionId}/quote`)
+      .set("Authorization", `Bearer ${pro.accessToken}`)
+      .send({ items: SAMPLE_ITEMS, notes: "Devis v2 (revised)" });
+    expect(created2.status).toBe(201);
+    quoteIds.push(created2.body.data.quoteId as string);
+
+    const res = await request(app)
+      .get(`/interventions/${interventionId}/quotes`)
+      .set("Authorization", `Bearer ${owner.accessToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.data).toHaveLength(2);
+    // Newest first: v2 (SENT) then v1 (REJECTED).
+    expect(
+      (res.body.data as Array<{ quoteId: string; status: string }>).map((q) => [
+        q.quoteId,
+        q.status,
+      ])
+    ).toEqual([
+      [quoteIds[1], "SENT"],
+      [quoteIds[0], "REJECTED"],
+    ]);
+    expect(
+      (res.body.data as Array<{ totalAmountCents: number }>).every(
+        (q) => q.totalAmountCents === 21600
+      )
+    ).toBe(true);
+    expect(
+      (res.body.data as Array<{ items: unknown[] }>).every(
+        (q) => q.items.length === 2
+      )
+    ).toBe(true);
+  });
+
+  it("returns the devis list for the assigned provider too", async () => {
+    const { pro, interventionId } = await setupQuotes(1);
+
+    const res = await request(app)
+      .get(`/interventions/${interventionId}/quotes`)
+      .set("Authorization", `Bearer ${pro.accessToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.data).toHaveLength(1);
+    expect(res.body.data[0].status).toBe("SENT");
+  });
+});

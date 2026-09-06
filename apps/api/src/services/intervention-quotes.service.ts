@@ -382,6 +382,107 @@ export async function decideQuote(
   };
 }
 
+export interface InterventionQuoteSummary {
+  quoteId: string;
+  status: string;
+  subtotalCents: number;
+  taxAmountCents: number;
+  totalAmountCents: number;
+  currency: string;
+  notes?: string;
+  validUntil?: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  items: Array<{
+    description: string;
+    quantity: number;
+    unitPriceCents: number;
+    totalCents: number;
+    taxRate?: number;
+    kind?: string;
+  }>;
+}
+
+/**
+ * List the devis of one intervention, newest first, with their line items.
+ *
+ * Multi-tenant guard: only the CUSTOMER who owns the intervention or the
+ * ASSIGNED professional may see its quotes (403 for anyone else, including
+ * another customer or an unassigned pro).
+ */
+export async function listInterventionQuotes(
+  interventionId: string,
+  callerUserId: string
+): Promise<InterventionQuoteSummary[]> {
+  const interventionOid = toObjectId(interventionId);
+
+  const intervention = await Intervention.findOne({
+    _id: interventionOid,
+  })
+    .select("customer professional")
+    .lean();
+  if (!intervention) {
+    throw AppError.notFound("Intervention");
+  }
+
+  // Resolve the caller's professional row (if any) to compare against the
+  // assigned provider. A customer simply has no Professional document.
+  const professional = await Professional.findOne({
+    user: new Types.ObjectId(callerUserId),
+  })
+    .select("_id")
+    .lean();
+
+  const isOwner = String(intervention.customer) === String(callerUserId);
+  const isAssignedPro =
+    !!professional &&
+    !!intervention.professional &&
+    String(intervention.professional) === String(professional._id);
+  if (!isOwner && !isAssignedPro) {
+    throw AppError.forbidden(
+      "Only the intervention owner or its assigned provider can list the devis"
+    );
+  }
+
+  const quotes = await Quote.find({ intervention: interventionOid })
+    .sort({ createdAt: -1 })
+    .lean();
+
+  // Fan out the line items per quote (quotes hold their items as ObjectIds).
+  const quoteIds = quotes.map((q) => q._id);
+  const items = await QuoteItem.find({ quote: { $in: quoteIds } })
+    .sort({ createdAt: 1 })
+    .lean();
+  const itemsByQuote = new Map<string, Array<(typeof items)[number]>>();
+  for (const it of items) {
+    const key = String(it.quote);
+    const bucket = itemsByQuote.get(key) ?? [];
+    bucket.push(it);
+    itemsByQuote.set(key, bucket);
+  }
+
+  return quotes.map((q) => ({
+    quoteId: q._id.toString(),
+    status: q.status,
+    subtotalCents: q.subtotalCents,
+    taxAmountCents: q.taxAmountCents,
+    totalAmountCents: q.totalAmountCents,
+    currency: q.currency,
+    notes: q.notes,
+    validUntil: q.validUntil,
+    createdAt: q.createdAt,
+    updatedAt: q.updatedAt,
+    items: (itemsByQuote.get(String(q._id)) ?? []).map((it) => ({
+      description: it.description,
+      quantity: it.quantity,
+      unitPriceCents: it.unitPriceCents,
+      totalCents: it.totalCents,
+      taxRate: it.taxRate,
+      kind: it.kind,
+    })),
+  }));
+}
+
 function toObjectId(value: string): Types.ObjectId {
   if (!Types.ObjectId.isValid(value)) {
     throw AppError.badRequest("Invalid interventionId");

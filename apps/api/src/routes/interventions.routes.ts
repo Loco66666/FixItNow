@@ -22,6 +22,7 @@ import {
   getInterventionHistoryController,
   getMatchingCandidatesController,
   listMyInterventionsController,
+  listQuotesController,
   runMatchingController,
   runProviderActionController,
 } from "../controllers/interventions.controller";
@@ -133,6 +134,19 @@ router.post(
   rateLimit({ name: "interventions.quote.create", max: 10, windowSec: 60 }),
   validate({ params: interventionIdParamSchema, body: createQuoteSchema }),
   createQuoteController
+);
+
+/**
+ * GET /interventions/:id/quotes
+ *
+ * Lists the devis of one intervention, newest first. Multi-tenant: only the
+ * owning customer or the assigned provider (service-level 403 otherwise).
+ */
+router.get(
+  "/:id/quotes",
+  requireAuth,
+  validate({ params: interventionIdParamSchema }),
+  listQuotesController
 );
 
 /**

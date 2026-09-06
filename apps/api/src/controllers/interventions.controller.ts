@@ -3,6 +3,7 @@ import type { InterventionAction } from "@fixitnow/types";
 import {
   createQuote,
   decideQuote,
+  listInterventionQuotes,
 } from "../services/intervention-quotes.service";
 import type { QuoteItemInput } from "../services/intervention-quotes.service";
 
@@ -255,6 +256,29 @@ export async function runProviderActionController(
     });
 
     res.status(200).json({ data: result });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * GET /interventions/:id/quotes
+ *
+ * Lists the devis of one intervention (newest first, with line items).
+ * Multi-tenant: only the owning customer or the assigned provider — enforced
+ * in the service.
+ */
+export async function listQuotesController(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    if (!req.auth) throw new Error("Missing auth context");
+
+    const quotes = await listInterventionQuotes(req.params.id, req.auth.userId);
+
+    res.json({ data: quotes });
   } catch (error) {
     next(error);
   }
