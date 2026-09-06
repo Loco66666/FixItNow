@@ -235,6 +235,78 @@ describe("POST /interventions/:id/actions/:action", () => {
     expect(rt?.status).toBe("OPEN");
   });
 
+  it("runs `start`: QUOTE_ACCEPTED -> IN_PROGRESS after an accepted devis", async () => {
+    const owner = await makeUser({ role: "user" });
+    const intervention = await seedIntervention(owner.id);
+    const pro = await seedPro("Start Pro");
+
+    await acceptSeededIntervention(
+      owner.accessToken,
+      pro.accessToken,
+      String(pro.pro._id),
+      String(intervention._id)
+    );
+
+    const post = (action: string) =>
+      request(app)
+        .post(`/interventions/${intervention._id}/actions/${action}`)
+        .set("Authorization", `Bearer ${pro.accessToken}`)
+        .send({});
+    for (const action of ["en-route", "arrive", "diagnose"]) {
+      const r = await post(action);
+      expect(r.status).toBe(200);
+    }
+
+    // Pro submits a devis, customer accepts it -> QUOTE_ACCEPTED.
+    const quote = await request(app)
+      .post(`/interventions/${intervention._id}/quote`)
+      .set("Authorization", `Bearer ${pro.accessToken}`)
+      .send({
+        items: [
+          {
+            description: "Remplacement batterie 12V",
+            quantity: 1,
+            unit_price: 12000,
+            tax_rate: 0.2,
+            kind: "part",
+          },
+        ],
+      });
+    expect(quote.status).toBe(201);
+    const quoteId = quote.body.data.quoteId as string;
+    const accepted = await request(app)
+      .post(`/interventions/${intervention._id}/quote/${quoteId}/accept`)
+      .set("Authorization", `Bearer ${owner.accessToken}`);
+    expect(accepted.status).toBe(200);
+
+    // Now `start` is legal (QUOTE_ACCEPTED -> IN_PROGRESS).
+    const start = await post("start");
+    expect(start.status).toBe(200);
+    expect(start.body.data.previousStatus).toBe("QUOTE_ACCEPTED");
+    expect(start.body.data.status).toBe("IN_PROGRESS");
+
+    const iv = await Intervention.findById(intervention._id).lean();
+    expect(iv?.status).toBe("IN_PROGRESS");
+  });
+
+  it("409s on `start` before a quote is accepted", async () => {
+    const owner = await makeUser({ role: "user" });
+    const intervention = await seedIntervention(owner.id);
+    const pro = await seedPro("Start Too Early Pro");
+
+    await acceptSeededIntervention(
+      owner.accessToken,
+      pro.accessToken,
+      String(pro.pro._id),
+      String(intervention._id)
+    );
+    // State is ACCEPTED — no devis yet, so `start` is illegal.
+    const res = await request(app)
+      .post(`/interventions/${intervention._id}/actions/start`)
+      .set("Authorization", `Bearer ${pro.accessToken}`);
+    expect(res.status).toBe(409);
+  });
+
   it("409s on an illegal transition (arrive directly from ACCEPTED)", async () => {
     const owner = await makeUser({ role: "user" });
     const intervention = await seedIntervention(owner.id);

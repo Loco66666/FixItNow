@@ -46,6 +46,7 @@ export const interventionActionEnum = z.enum([
   "en-route",
   "arrive",
   "diagnose",
+  "start",
   "complete",
 ]);
 export type InterventionAction = z.infer<typeof interventionActionEnum>;

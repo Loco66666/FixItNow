@@ -20,6 +20,7 @@ const ACTION_TARGET: Record<InterventionAction, InterventionStatus> = {
   "en-route": InterventionStatus.EN_ROUTE,
   arrive: InterventionStatus.ARRIVED,
   diagnose: InterventionStatus.DIAGNOSING,
+  start: InterventionStatus.IN_PROGRESS,
   complete: InterventionStatus.COMPLETED,
 };
 
