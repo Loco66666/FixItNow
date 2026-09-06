@@ -29,6 +29,11 @@ export const createQuoteSchema = z.object({
   currency: z.string().trim().length(3).toUpperCase().optional(),
 });
 
+/** Params for routes addressing a specific payment. */
+export const paymentIdParamSchema = z.object({
+  paymentId: z.string().min(1),
+});
+
 /** Params for POST /interventions/:id/quote/:quoteId/:decision (accept|reject) */
 export const interventionQuoteParamSchema = z.object({
   id: z.string().min(1),

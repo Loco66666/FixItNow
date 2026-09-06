@@ -3,6 +3,7 @@ import { jsonTransform } from "../_transform";
 import { PaymentStatus, type CurrencyCode } from "@fixitnow/types";
 
 export interface PaymentDoc {
+  _id: Types.ObjectId;
   intervention: Types.ObjectId;
   customer: Types.ObjectId;
   professional: Types.ObjectId;
@@ -15,6 +16,7 @@ export interface PaymentDoc {
   provider: string;
   providerPaymentId?: string;
   paidAt?: Date;
+  authorizationExpiresAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -88,6 +90,10 @@ const paymentSchema = new Schema<PaymentDoc>(
       index: true,
     },
     paidAt: {
+      type: Date,
+    },
+    // Manual-capture authorization window (Stripe holds funds max ~7 days).
+    authorizationExpiresAt: {
       type: Date,
     },
   },

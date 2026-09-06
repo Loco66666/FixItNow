@@ -26,6 +26,7 @@ import {
   runMatchingController,
   runProviderActionController,
 } from "../controllers/interventions.controller";
+import { authorizePaymentController } from "../controllers/payments.controller";
 
 const router = Router();
 
@@ -162,6 +163,19 @@ router.post(
   rateLimit({ name: "interventions.quote.decide", max: 30, windowSec: 60 }),
   validate({ params: interventionQuoteParamSchema }),
   decideQuoteController
+);
+
+/**
+ * POST /interventions/:id/payments/authorize
+ *
+ * Customer pre-authorizes the ACCEPTED devis amount (manual-capture intent).
+ */
+router.post(
+  "/:id/payments/authorize",
+  requireAuth,
+  rateLimit({ name: "payments.authorize", max: 10, windowSec: 60 }),
+  validate({ params: interventionIdParamSchema }),
+  authorizePaymentController
 );
 
 export default router;

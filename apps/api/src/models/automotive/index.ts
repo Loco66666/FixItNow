@@ -15,6 +15,7 @@ export { Diagnosis } from "./Diagnosis";
 export { Quote } from "./Quote";
 export { QuoteItem } from "./QuoteItem";
 export { Payment } from "./Payment";
+export { WebhookEvent } from "./WebhookEvent";
 export { Invoice } from "./Invoice";
 export { Review } from "./Review";
 export { Conversation } from "./Conversation";

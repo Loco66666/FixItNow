@@ -19,6 +19,8 @@ import reviewsRouter from "./routes/reviews";
 import interventionsRouter from "./routes/interventions.routes";
 import vehiclesRouter from "./routes/vehicles.routes";
 import eventsRouter from "./routes/events.routes";
+import paymentsRouter from "./routes/payments.routes";
+import { stripeWebhookController } from "./controllers/payments.controller";
 import { openApiSpec } from "./openapi";
 
 export function createApp(): Express {
@@ -52,6 +54,14 @@ export function createApp(): Express {
   app.use(express.urlencoded({ extended: false }));
   app.use(cookieParser());
 
+  // Provider webhook — mounted as raw bytes BEFORE the global json parser so
+  // Stripe's signature can be verified against the untouched payload.
+  app.post(
+    "/webhooks/stripe",
+    express.raw({ type: "*/*" }),
+    stripeWebhookController
+  );
+
   // Routes
   app.use("/", healthRouter);
   app.use("/auth", authRouter);
@@ -62,6 +72,7 @@ export function createApp(): Express {
   app.use("/interventions", interventionsRouter);
   app.use("/vehicles", vehiclesRouter);
   app.use("/events", eventsRouter);
+  app.use("/payments", paymentsRouter);
 
   // OpenAPI / Swagger UI
   app.get("/api/docs.json", (_req, res) => res.json(openApiSpec));

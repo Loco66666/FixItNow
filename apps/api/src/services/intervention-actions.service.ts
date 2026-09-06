@@ -146,6 +146,19 @@ export async function runProviderAction(input: RunProviderActionInput) {
         "provider realtime status release failed"
       );
     }
+
+    // PHASE 07: capture the pre-authorized payment (best-effort — a missing
+    // live authorization is a legal no-op).
+    try {
+      const { capturePaymentByIntervention } =
+        await import("./payment.service");
+      await capturePaymentByIntervention(interventionOid.toHexString());
+    } catch (err) {
+      logger.warn(
+        { err: { message: (err as Error)?.message } },
+        "payment capture on completion failed"
+      );
+    }
   }
 
   return {

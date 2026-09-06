@@ -32,6 +32,23 @@ const envSchema = z.object({
   LOG_LEVEL: z
     .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
     .default("info"),
+
+  // Payments (PHASE 07 — Stripe). PAYMENTS_ENABLED is a kill-switch: set
+  // PAYMENTS_ENABLED=false to hard-disable the payment endpoints even when
+  // keys are present. Without STRIPE_SECRET_KEY the gateway returns 503.
+  PAYMENTS_ENABLED: z
+    .string()
+    .default("true")
+    .transform((v) => v !== "false"),
+  STRIPE_SECRET_KEY: z.string().min(1).optional(),
+  STRIPE_WEBHOOK_SECRET: z.string().min(1).optional(),
+  PLATFORM_COMMISSION_PCT: z.coerce.number().min(0).max(50).default(15),
+  PAYMENT_AUTHORIZATION_TTL_DAYS: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(7)
+    .default(7),
 });
 
 const parsed = envSchema.safeParse(process.env);
