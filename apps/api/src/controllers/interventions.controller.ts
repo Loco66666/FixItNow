@@ -1,5 +1,45 @@
 import type { NextFunction, Request, Response } from "express";
 import type { InterventionAction } from "@fixitnow/types";
+import { createQuote } from "../services/intervention-quotes.service";
+import type { QuoteItemInput } from "../services/intervention-quotes.service";
+
+/**
+ * POST /interventions/:id/quote
+ *
+ * Lets the authenticated professional (assigned, in DIAGNOSING) submit a devis
+ * (quote_item list with French VAT ladders). `requireProfessional` gates the
+ * domain role; the service enforces assignment + the QUOTE_PENDING transition.
+ */
+export async function createQuoteController(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    if (!req.auth) throw new Error("Missing auth context");
+
+    const items: QuoteItemInput[] = (req.body.items ?? []).map((it: any) => ({
+      description: it.description,
+      quantity: Number(it.quantity),
+      unit_price: Number(it.unit_price),
+      tax_rate: Number(it.tax_rate),
+      kind: it.kind,
+    }));
+
+    const result = await createQuote({
+      interventionId: req.params.id,
+      professionalUserId: req.auth.userId,
+      items,
+      notes: typeof req.body.notes === "string" ? req.body.notes : undefined,
+      currency: req.body.currency ? String(req.body.currency) : undefined,
+    });
+
+    res.status(201).json({ data: result });
+  } catch (error) {
+    next(error);
+  }
+}
+
 import {
   createIntervention,
   getCustomerIntervention,

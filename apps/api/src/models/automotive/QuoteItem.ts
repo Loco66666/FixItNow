@@ -7,6 +7,8 @@ export interface QuoteItemDoc {
   quantity: number;
   unitPriceCents: number;
   totalCents: number;
+  taxRate?: number;
+  kind?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -25,15 +27,22 @@ const quoteItemSchema = new Schema<QuoteItemDoc>(
       trim: true,
       maxlength: 1000,
     },
-    quantity: {
-      type: Number,
-      required: true,
-      min: 0.01,
-    },
+    quantity: { type: Number, required: true, min: 0.01 },
     unitPriceCents: {
       type: Number,
       required: true,
       min: 0,
+    },
+    // Per-item VAT rate (France metropolitan rate ladder), kept so the web
+    // client can display a consistent line-level total inclusive of tax.
+    taxRate: {
+      type: Number,
+      min: 0,
+      max: 0.2,
+    },
+    kind: {
+      type: String,
+      enum: ["part", "labor", "service"],
     },
     totalCents: {
       type: Number,

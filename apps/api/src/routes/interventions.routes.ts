@@ -5,6 +5,7 @@ import { rateLimit } from "../middlewares/rateLimit";
 import { validate } from "../middlewares/validate";
 import {
   createInterventionSchema,
+  createQuoteSchema,
   interventionActionBodySchema,
   interventionActionParamSchema,
   interventionIdParamSchema,
@@ -14,6 +15,7 @@ import {
 import {
   acceptMatchingCandidateController,
   createInterventionController,
+  createQuoteController,
   getInterventionController,
   getInterventionHistoryController,
   getMatchingCandidatesController,
@@ -112,6 +114,23 @@ router.post(
     body: interventionActionBodySchema,
   }),
   runProviderActionController
+);
+
+/**
+ * POST /interventions/:id/quote
+ *
+ * Creates a provider quote (devis) — the pro submits a typed item list with
+ * French VAT ladders on an intervention assigned to them in DIAGNOSING.
+ * `requireProfessional` + `requireAssignedProvider` gate the domain role; the
+ * service enforces assignment + the DIAGNOSING → QUOTE_PENDING transition.
+ */
+router.post(
+  "/:id/quote",
+  requireAuth,
+  requireProfessional,
+  rateLimit({ name: "interventions.quote.create", max: 10, windowSec: 60 }),
+  validate({ params: interventionIdParamSchema, body: createQuoteSchema }),
+  createQuoteController
 );
 
 export default router;

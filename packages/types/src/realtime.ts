@@ -20,7 +20,8 @@ export interface ProviderRealtimeStatusSnapshot {
 /** Domain events pushed over the intervention SSE channel. */
 export type InterventionEventType =
   | "intervention.accepted"
-  | "intervention.status-changed";
+  | "intervention.status-changed"
+  | "intervention.quote.created";
 
 export interface InterventionEvent {
   type: InterventionEventType;

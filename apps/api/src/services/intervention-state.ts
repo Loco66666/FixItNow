@@ -14,10 +14,10 @@ export type InterventionActor = "customer" | "provider" | "system";
  * Terminal states (COMPLETED, CANCELLED, DECLINED, EXPIRED, FAILED, NO_SHOW,
  * DISPUTED) intentionally have no outgoing edges.
  *
- * Quote workflow (PHASE 06): the AUDIT locks DIAGNOSING → QUOTE_PENDING →
- * QUOTE_ACCEPTED → IN_PROGRESS (legal pricing disclosure before any work at
- * home, Service-Public F38350). Until quotes exist, DIAGNOSING → COMPLETED is
- * allowed as a temporary direct path — remove it when PHASE 06 lands.
+ * Quote workflow (PHASE 06): DIAGNOSING → QUOTE_PENDING → QUOTE_ACCEPTED →
+ * IN_PROGRESS (legal pricing disclosure before any work at home, Service-Public
+ * F38350). Until quotes become mandatory, DIAGNOSING → COMPLETED stays allowed
+ * as a temporary direct path (TODO: PHASE 09 — lift the permit).
  */
 export const INTERVENTION_TRANSITIONS: Record<
   InterventionStatus,
@@ -48,9 +48,11 @@ export const INTERVENTION_TRANSITIONS: Record<
     provider: [InterventionStatus.DIAGNOSING],
   },
   [InterventionStatus.DIAGNOSING]: {
-    // TODO(PHASE 06): replace the direct COMPLETED edge with the quote workflow
-    // (DIAGNOSING → QUOTE_PENDING → QUOTE_ACCEPTED → IN_PROGRESS).
-    provider: [InterventionStatus.COMPLETED],
+    // PHASE 06: the provider submits a quote → intervention becomes QUOTE_PENDING
+    // (until the customer accepts → QUOTE_ACCEPTED → IN_PROGRESS).
+    // The direct DIAGNOSING → COMPLETED path stays allowed until quotes are
+    // mandatory (TODO: PHASE 09 — lift the permit).
+    provider: [InterventionStatus.QUOTE_PENDING, InterventionStatus.COMPLETED],
   },
   [InterventionStatus.QUOTE_PENDING]: {
     customer: [InterventionStatus.QUOTE_ACCEPTED],
