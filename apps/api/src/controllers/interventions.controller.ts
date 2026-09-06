@@ -6,6 +6,7 @@ import {
   listCustomerInterventions,
 } from "../services/intervention.service";
 import {
+  acceptCandidate,
   listMatchingCandidates,
   runMatchingForIntervention,
 } from "../services/matching.service";
@@ -126,6 +127,33 @@ export async function getMatchingCandidatesController(
     );
 
     res.json({ data: candidates });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * POST /interventions/:id/match/:candidateId/accept
+ *
+ * Lets the authenticated provider claim the matching candidate proposed to them.
+ * `requireProfessional` (mounted on the route) guarantees `domainRole === PRO`
+ * before this handler runs.
+ */
+export async function acceptMatchingCandidateController(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    if (!req.auth) throw new Error("Missing auth context");
+
+    const result = await acceptCandidate({
+      interventionId: req.params.id,
+      candidateId: req.params.candidateId,
+      professionalUserId: req.auth.userId,
+    });
+
+    res.status(200).json({ data: result });
   } catch (error) {
     next(error);
   }

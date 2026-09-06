@@ -15,6 +15,7 @@ export interface MatchingCandidateDoc {
   ratingScore: number;
   etaScore: number;
   historyScore: number;
+  acceptedAt?: Date;
   expiresAt: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -46,6 +47,10 @@ const matchingCandidateSchema = new Schema<MatchingCandidateDoc>(
       enum: Object.values(MatchCandidateStatus),
       required: true,
       default: MatchCandidateStatus.PENDING,
+      index: true,
+    },
+    acceptedAt: {
+      type: Date,
       index: true,
     },
     // Weighted total, [0, 100], one decimal.

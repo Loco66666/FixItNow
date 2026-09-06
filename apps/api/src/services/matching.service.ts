@@ -13,6 +13,7 @@ import { Availability } from "../models/automotive/Availability";
 import { Review } from "../models/automotive/Review";
 import { ProfessionalSkill } from "../models/automotive/ProfessionalSkill";
 import { MatchingCandidate } from "../models/automotive/MatchingCandidate";
+import { InterventionStatusHistory } from "../models/automotive/InterventionStatusHistory";
 import { AppError } from "../utils/AppError";
 import { haversineKm, scoreProvider } from "./matching-score";
 import type { ScoreProviderResult } from "./matching-score";
@@ -319,4 +320,141 @@ export async function listMatchingCandidates(
     score: -1,
     createdAt: -1,
   });
+}
+
+const ASSIGNABLE_STATUSES = [
+  InterventionStatus.REQUESTED,
+  InterventionStatus.SEARCHING,
+];
+
+export interface AcceptCandidateInput {
+  interventionId: string;
+  candidateId: string;
+  professionalUserId: string;
+}
+
+/**
+ * Atomically claim a `MatchingCandidate` for the authenticated professional and
+ * lock the underlying intervention (`REQUESTED`/`SEARCHING` → `ACCEPTED`).
+ *
+ * Concurrency model
+ *  - Candidate claim: a single `findOneAndUpdate` whose filter scopes the row by
+ *    `(intervention, professional, status: PENDING, not expired)`. Two providers
+ *    racing the same candidate → one wins; the loser is classified via a follow-up
+ *    read so it gets a precise status code (404 / 403 / 409).
+ *  - Intervention lock: the same compare-&-swap on `Intervention` (`status` in
+ *    `ASSIGNABLE_STATUSES` + unset `professional`). A concurrent accept on the
+ *    same intervention fails the cascade → the candidate is rolled back to
+ *    `DECLINED` + 409, never leaving an ACCEPTED candidate for a non-attributable
+ *    job.
+ *  - No multi-doc transaction is required: each step is a single-row compare-&-swap,
+ *    so the design stays unit-testable on Mongomem without replica-set sessions.
+ */
+export async function acceptCandidate(input: AcceptCandidateInput) {
+  const interventionId = toObjectId(input.interventionId, "interventionId");
+  const candidateId = toObjectId(input.candidateId, "candidateId");
+  const now = new Date();
+
+  // The professional profile of the authenticated user.
+  const professional = await Professional.findOne({
+    user: new Types.ObjectId(input.professionalUserId),
+    isActive: true,
+  })
+    .select("_id")
+    .lean();
+
+  if (!professional) {
+    throw AppError.forbidden(
+      "You are not registered as an active professional"
+    );
+  }
+
+  const proId = professional._id;
+
+  // (1) Atomic claim of the candidate row, scoped to this pro + still pending.
+  const claimed = await MatchingCandidate.findOneAndUpdate(
+    {
+      _id: candidateId,
+      intervention: interventionId,
+      professional: proId,
+      status: MatchCandidateStatus.PENDING,
+      expiresAt: { $gte: now },
+    },
+    {
+      $set: {
+        status: MatchCandidateStatus.ACCEPTED,
+        acceptedAt: now,
+      },
+    },
+    { new: false }
+  )
+    .select("professional status")
+    .lean();
+
+  if (!claimed) {
+    const existing = await MatchingCandidate.findById(candidateId)
+      .select("professional status expiresAt")
+      .lean();
+    if (!existing) {
+      throw AppError.notFound("MatchingCandidate");
+    }
+    if (String(existing.professional) !== String(proId)) {
+      throw AppError.forbidden(
+        "This candidate was proposed to another provider"
+      );
+    }
+    throw AppError.conflict(
+      "Candidate is no longer available (already accepted, expired, or superseded)"
+    );
+  }
+
+  // (2) Atomic lock of the intervention, only if still unattributed.
+  const intervention = await Intervention.findOneAndUpdate(
+    {
+      _id: interventionId,
+      status: { $in: ASSIGNABLE_STATUSES },
+      professional: { $exists: false },
+    },
+    {
+      $set: {
+        status: InterventionStatus.ACCEPTED,
+        professional: proId,
+        startedAt: now,
+      },
+    },
+    { new: false }
+  ).lean();
+
+  if (!intervention) {
+    // Another provider grabbed the intervention first: release the candidate so
+    // it is not left in ACCEPTED for a job we cannot honour.
+    await MatchingCandidate.updateOne(
+      { _id: candidateId },
+      { $set: { status: MatchCandidateStatus.DECLINED } }
+    );
+    throw AppError.conflict(
+      "Intervention already assigned to another provider"
+    );
+  }
+
+  // (3) Audit trail (best-effort; state transition is the source of truth).
+  // TODO(PHASE 05.2): emit an "intervention.accepted" event for SSE streaming.
+  try {
+    await InterventionStatusHistory.create({
+      intervention: interventionId,
+      fromStatus: intervention.status as InterventionStatus,
+      toStatus: InterventionStatus.ACCEPTED,
+      actor: new Types.ObjectId(input.professionalUserId),
+      reason: "Provider accepted the matching candidate",
+    });
+  } catch {
+    /* audit log is best-effort */
+  }
+
+  return {
+    interventionId: interventionId.toHexString(),
+    candidateId: candidateId.toHexString(),
+    professionalId: proId.toHexString(),
+    status: InterventionStatus.ACCEPTED,
+  };
 }

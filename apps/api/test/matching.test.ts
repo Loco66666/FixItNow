@@ -15,6 +15,7 @@ import { Skill } from "../src/models/automotive/Skill";
 import { ProfessionalSkill } from "../src/models/automotive/ProfessionalSkill";
 import { Review } from "../src/models/automotive/Review";
 import { MatchingCandidate } from "../src/models/automotive/MatchingCandidate";
+import { InterventionStatusHistory } from "../src/models/automotive/InterventionStatusHistory";
 import { scoreProvider, MATCH_WEIGHTS } from "../src/services/matching-score";
 
 const app = createApp();
@@ -122,6 +123,35 @@ async function seedProfessional(opts: {
   }
 
   return pro;
+}
+
+/** Seed a professional whose JWT is minted as `role: "owner"` so the auth
+ *  layer maps it to `domainRole: PROFESSIONAL` — i.e. eligible to accept. */
+async function seedPro(opts: {
+  displayName: string;
+  kmNorth?: number;
+  availability?: string;
+}) {
+  const user = await makeUser({ role: "owner" });
+  const point = offsetPoint(opts.kmNorth ?? 2);
+  const pro = await Professional.create({
+    user: user.id,
+    type: "INDEPENDENT",
+    displayName: opts.displayName,
+    serviceRadiusKm: 30,
+    verificationStatus: "APPROVED",
+    isActive: true,
+    isHighwayAuthorized: false,
+    location: { type: "Point", coordinates: [point.longitude, point.latitude] },
+  });
+  if (opts.availability) {
+    await Availability.create({
+      professional: pro._id,
+      status: opts.availability,
+      timezone: "Europe/Paris",
+    });
+  }
+  return { pro, accessToken: user.accessToken, userId: user.id };
 }
 
 async function seedIntervention(
@@ -455,5 +485,138 @@ describe("GET /interventions/:id/match", () => {
       .get(`/interventions/${intervention._id}/match`)
       .set("Authorization", `Bearer ${stranger.accessToken}`);
     expect(forbidden.status).toBe(404);
+  });
+});
+
+describe("POST /interventions/:id/match/:candidateId/accept", () => {
+  async function setupTwoPros() {
+    const owner = await makeUser({ role: "user" });
+    const intervention = await seedIntervention(owner.id);
+    const proA = await seedPro({
+      displayName: "Pro A",
+      kmNorth: 2,
+      availability: "AVAILABLE_NOW",
+    });
+    const proB = await seedPro({
+      displayName: "Pro B",
+      kmNorth: 4,
+      availability: "AVAILABLE_NOW",
+    });
+
+    // Matching run by the customer produces one PENDING candidate per eligible pro.
+    await request(app)
+      .post(`/interventions/${intervention._id}/match`)
+      .set("Authorization", `Bearer ${owner.accessToken}`);
+
+    const candidates = await MatchingCandidate.find({
+      intervention: intervention._id,
+    }).sort({ score: -1 });
+
+    return { owner, intervention, proA, proB, candidates };
+  }
+
+  it("accepts a pending candidate and locks the intervention (REQUESTED → ACCEPTED)", async () => {
+    const { intervention, proA, candidates } = await setupTwoPros();
+    const candidate = candidates.find(
+      (c) => String(c.professional) === String(proA.pro._id)
+    );
+    expect(candidate).toBeDefined();
+
+    const res = await request(app)
+      .post(`/interventions/${intervention._id}/match/${candidate!._id}/accept`)
+      .set("Authorization", `Bearer ${proA.accessToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.status).toBe("ACCEPTED");
+    expect(res.body.data.professionalId).toBe(String(proA.pro._id));
+    expect(res.body.data.candidateId).toBe(String(candidate!._id));
+
+    const iv = await Intervention.findById(intervention._id).lean();
+    expect(iv?.status).toBe("ACCEPTED");
+    expect(iv?.professional?.toString()).toBe(String(proA.pro._id));
+    expect(iv?.startedAt).toBeDefined();
+
+    const cand = await MatchingCandidate.findById(candidate!._id).lean();
+    expect(cand?.status).toBe("ACCEPTED");
+    expect(cand?.acceptedAt).toBeDefined();
+
+    const history = await InterventionStatusHistory.findOne({
+      intervention: intervention._id,
+      toStatus: "ACCEPTED",
+    }).lean();
+    expect(history?.fromStatus).toBe("REQUESTED");
+    expect(history?.actor?.toString()).toBe(String(proA.userId));
+  });
+
+  it("returns 409 when a second provider races the same intervention", async () => {
+    const { intervention, proA, proB, candidates } = await setupTwoPros();
+    const candA = candidates.find(
+      (c) => String(c.professional) === String(proA.pro._id)
+    );
+    const candB = candidates.find(
+      (c) => String(c.professional) === String(proB.pro._id)
+    );
+
+    const first = await request(app)
+      .post(`/interventions/${intervention._id}/match/${candA!._id}/accept`)
+      .set("Authorization", `Bearer ${proA.accessToken}`);
+    expect(first.status).toBe(200);
+
+    const second = await request(app)
+      .post(`/interventions/${intervention._id}/match/${candB!._id}/accept`)
+      .set("Authorization", `Bearer ${proB.accessToken}`);
+    expect(second.status).toBe(409);
+
+    const iv = await Intervention.findById(intervention._id).lean();
+    expect(iv?.status).toBe("ACCEPTED");
+    expect(iv?.professional?.toString()).toBe(String(proA.pro._id));
+
+    // Losing candidate is rolled back to DECLINED, never left ACCEPTED.
+    const cand = await MatchingCandidate.findById(candB!._id).lean();
+    expect(cand?.status).toBe("DECLINED");
+  });
+
+  it("403s when a provider tries to accept another provider's candidate", async () => {
+    const { intervention, proA, proB, candidates } = await setupTwoPros();
+    const candB = candidates.find(
+      (c) => String(c.professional) === String(proB.pro._id)
+    );
+
+    const res = await request(app)
+      .post(`/interventions/${intervention._id}/match/${candB!._id}/accept`)
+      .set("Authorization", `Bearer ${proA.accessToken}`);
+    expect(res.status).toBe(403);
+
+    const cand = await MatchingCandidate.findById(candB!._id).lean();
+    expect(cand?.status).toBe("PENDING");
+  });
+
+  it("403s when a customer (role: user) attempts to accept", async () => {
+    const { owner, intervention, proA, candidates } = await setupTwoPros();
+    const candidate = candidates.find(
+      (c) => String(c.professional) === String(proA.pro._id)
+    );
+
+    const res = await request(app)
+      .post(`/interventions/${intervention._id}/match/${candidate!._id}/accept`)
+      .set("Authorization", `Bearer ${owner.accessToken}`);
+    expect(res.status).toBe(403);
+  });
+
+  it("is idempotent on replay: re-accepting an accepted candidate returns 409", async () => {
+    const { intervention, proA, candidates } = await setupTwoPros();
+    const candidate = candidates.find(
+      (c) => String(c.professional) === String(proA.pro._id)
+    );
+
+    const first = await request(app)
+      .post(`/interventions/${intervention._id}/match/${candidate!._id}/accept`)
+      .set("Authorization", `Bearer ${proA.accessToken}`);
+    expect(first.status).toBe(200);
+
+    const replay = await request(app)
+      .post(`/interventions/${intervention._id}/match/${candidate!._id}/accept`)
+      .set("Authorization", `Bearer ${proA.accessToken}`);
+    expect(replay.status).toBe(409);
   });
 });

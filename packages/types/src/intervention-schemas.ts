@@ -11,6 +11,12 @@ export const interventionIdParamSchema = z.object({
   id: z.string().min(1),
 });
 
+/** Params for a route acting on a specific matching candidate of an intervention. */
+export const interventionMatchCandidateParamSchema = z.object({
+  id: z.string().min(1),
+  candidateId: z.string().min(1),
+});
+
 export const createInterventionSchema = z.object({
   vehicleId: z.string().min(1),
   urgency: z.enum(["NORMAL", "URGENT", "EMERGENCY"]).optional(),

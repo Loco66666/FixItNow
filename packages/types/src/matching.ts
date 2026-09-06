@@ -26,6 +26,7 @@ export interface MatchingCandidate {
   etaScore: number;
   historyScore: number;
   expiresAt: ISODateString;
+  acceptedAt?: ISODateString;
   createdAt: ISODateString;
   updatedAt: ISODateString;
 }

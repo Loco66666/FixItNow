@@ -1,13 +1,16 @@
 import { Router } from "express";
 import { requireAuth } from "../middlewares/requireAuth";
+import { requireProfessional } from "../middlewares/requireProfessional";
 import { rateLimit } from "../middlewares/rateLimit";
 import { validate } from "../middlewares/validate";
 import {
   createInterventionSchema,
   interventionIdParamSchema,
   interventionListQuerySchema,
+  interventionMatchCandidateParamSchema,
 } from "@fixitnow/types";
 import {
+  acceptMatchingCandidateController,
   createInterventionController,
   getInterventionController,
   getInterventionHistoryController,
@@ -61,6 +64,23 @@ router.get(
   requireAuth,
   validate({ params: interventionIdParamSchema }),
   getMatchingCandidatesController
+);
+
+/**
+ * POST /interventions/:id/match/:candidateId/accept
+ *
+ * Claims a candidate produced by matching for `interventionId`, on behalf of
+ * the calling professional. Owner-gated: requireAuth + requireProfessional
+ * (domainRole PRO) + param validation + matching.accept rate limit. Concurrency
+ * is resolved in `acceptCandidate` via single-row compare-&-swap (409 on races).
+ */
+router.post(
+  "/:id/match/:candidateId/accept",
+  requireAuth,
+  requireProfessional,
+  rateLimit({ name: "interventions.match.accept", max: 30, windowSec: 60 }),
+  validate({ params: interventionMatchCandidateParamSchema }),
+  acceptMatchingCandidateController
 );
 
 router.get(
