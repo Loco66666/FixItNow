@@ -40,3 +40,23 @@ export const interventionListQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).optional(),
   skip: z.coerce.number().int().min(0).optional(),
 });
+
+/** Lifecycle actions a provider can run on an intervention they own. */
+export const interventionActionEnum = z.enum([
+  "en-route",
+  "arrive",
+  "diagnose",
+  "complete",
+]);
+export type InterventionAction = z.infer<typeof interventionActionEnum>;
+
+/** Params for POST /interventions/:id/actions/:action */
+export const interventionActionParamSchema = z.object({
+  id: z.string().min(1),
+  action: interventionActionEnum,
+});
+
+/** Optional body for lifecycle actions — recorded in the status history. */
+export const interventionActionBodySchema = z.object({
+  note: z.string().trim().min(1).max(1000).optional(),
+});

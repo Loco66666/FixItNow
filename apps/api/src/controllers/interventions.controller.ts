@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
+import type { InterventionAction } from "@fixitnow/types";
 import {
   createIntervention,
   getCustomerIntervention,
@@ -10,6 +11,7 @@ import {
   listMatchingCandidates,
   runMatchingForIntervention,
 } from "../services/matching.service";
+import { runProviderAction } from "../services/intervention-actions.service";
 
 export async function createInterventionController(
   req: Request,
@@ -151,6 +153,34 @@ export async function acceptMatchingCandidateController(
       interventionId: req.params.id,
       candidateId: req.params.candidateId,
       professionalUserId: req.auth.userId,
+    });
+
+    res.status(200).json({ data: result });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * POST /interventions/:id/actions/:action
+ *
+ * Runs a provider lifecycle action (en-route | arrive | diagnose | complete)
+ * on an intervention the caller is assigned to. `requireProfessional` gates
+ * the domain role; the service enforces assignment + the state machine.
+ */
+export async function runProviderActionController(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    if (!req.auth) throw new Error("Missing auth context");
+
+    const result = await runProviderAction({
+      interventionId: req.params.id,
+      professionalUserId: req.auth.userId,
+      action: req.params.action as InterventionAction,
+      note: typeof req.body?.note === "string" ? req.body.note : undefined,
     });
 
     res.status(200).json({ data: result });

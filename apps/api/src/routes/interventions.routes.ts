@@ -5,6 +5,8 @@ import { rateLimit } from "../middlewares/rateLimit";
 import { validate } from "../middlewares/validate";
 import {
   createInterventionSchema,
+  interventionActionBodySchema,
+  interventionActionParamSchema,
   interventionIdParamSchema,
   interventionListQuerySchema,
   interventionMatchCandidateParamSchema,
@@ -17,6 +19,7 @@ import {
   getMatchingCandidatesController,
   listMyInterventionsController,
   runMatchingController,
+  runProviderActionController,
 } from "../controllers/interventions.controller";
 
 const router = Router();
@@ -88,6 +91,27 @@ router.get(
   requireAuth,
   validate({ params: interventionIdParamSchema }),
   getInterventionController
+);
+
+/**
+ * POST /interventions/:id/actions/:action
+ *
+ * Provider lifecycle actions (en-route | arrive | diagnose | complete) on an
+ * intervention the caller is assigned to. Owner-gated (requireProfessional) +
+ * rate-limited; legality is enforced by the state table in
+ * `services/intervention-state.ts` and every transition is journalled into
+ * InterventionStatusHistory and streamed on the intervention SSE channel.
+ */
+router.post(
+  "/:id/actions/:action",
+  requireAuth,
+  requireProfessional,
+  rateLimit({ name: "interventions.actions", max: 60, windowSec: 60 }),
+  validate({
+    params: interventionActionParamSchema,
+    body: interventionActionBodySchema,
+  }),
+  runProviderActionController
 );
 
 export default router;
