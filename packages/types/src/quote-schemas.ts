@@ -29,6 +29,13 @@ export const createQuoteSchema = z.object({
   currency: z.string().trim().length(3).toUpperCase().optional(),
 });
 
+/** Params for POST /interventions/:id/quote/:quoteId/:decision (accept|reject) */
+export const interventionQuoteParamSchema = z.object({
+  id: z.string().min(1),
+  quoteId: z.string().min(1),
+  decision: z.enum(["accept", "reject"]),
+});
+
 export const quoteItemTaxRateEnum = ["0", "0.055", "0.1", "0.2"] as const;
 
 /** QuoteItem as persisted by Mongoose (totalCents = HT, before tax). */

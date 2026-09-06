@@ -244,6 +244,144 @@ export async function createQuote(
   };
 }
 
+export interface DecideQuoteInput {
+  interventionId: string;
+  quoteId: string;
+  customerUserId: string;
+  decision: "accept" | "reject";
+}
+
+export interface DecideQuoteResult {
+  interventionId: string;
+  quoteId: string;
+  decision: "accept" | "reject";
+  previousStatus: InterventionStatus;
+  status: InterventionStatus;
+  quoteStatus: string;
+}
+
+/**
+ * Customer decision (accept | reject) on a devis of their intervention.
+ *
+ * Guarantees
+ *  - Only the intervention OWNER may decide (403 otherwise) — a pro, an admin
+ *    or another customer cannot touch someone else's devis.
+ *  - The intervention MUST be in QUOTE_PENDING (state-machine 409 otherwise).
+ *  - accept: intervention → QUOTE_ACCEPTED + quote → ACCEPTED. The provider
+ *    can then start work (QUOTE_ACCEPTED → IN_PROGRESS).
+ *  - reject: intervention → back to DIAGNOSING (revised devis possible) and
+ *    quote → REJECTED.
+ *  - The status flip is a single compare-&-swap (`status: QUOTE_PENDING`), so
+ *    a racing provider action or a double decision cannot double-apply → 409.
+ */
+export async function decideQuote(
+  input: DecideQuoteInput
+): Promise<DecideQuoteResult> {
+  const interventionOid = toObjectId(input.interventionId);
+  const quoteOid = toObjectId(input.quoteId);
+  const now = new Date();
+  const accepting = input.decision === "accept";
+
+  const intervention = await Intervention.findOne({
+    _id: interventionOid,
+  })
+    .select("status customer")
+    .lean();
+  if (!intervention) {
+    throw AppError.notFound("Intervention");
+  }
+  if (String(intervention.customer) !== input.customerUserId) {
+    throw AppError.forbidden(
+      "Only the intervention owner can decide on its devis"
+    );
+  }
+
+  const quote = await Quote.findOne({
+    _id: quoteOid,
+    intervention: interventionOid,
+  }).lean();
+  if (!quote) {
+    throw AppError.notFound("Quote");
+  }
+
+  const previousStatus = intervention.status as InterventionStatus;
+  const nextStatus = accepting
+    ? InterventionStatus.QUOTE_ACCEPTED
+    : InterventionStatus.DIAGNOSING;
+  assertTransition(previousStatus, nextStatus, "customer");
+
+  // Atomic compare-&-swap on the intervention status.
+  const updated = await Intervention.findOneAndUpdate(
+    { _id: interventionOid, status: InterventionStatus.QUOTE_PENDING },
+    { $set: { status: nextStatus } },
+    { new: true }
+  )
+    .select("status")
+    .lean();
+  if (!updated) {
+    throw AppError.conflict(
+      `Intervention is no longer in status ${InterventionStatus.QUOTE_PENDING}`
+    );
+  }
+
+  // Flip the quote row (only while still SENT — a second decision loses the CAS).
+  const quoteStatus = accepting ? QuoteStatus.ACCEPTED : QuoteStatus.REJECTED;
+  await Quote.updateOne(
+    { _id: quoteOid, status: QuoteStatus.SENT },
+    { $set: { status: quoteStatus } }
+  );
+
+  // Audit trail (best-effort).
+  try {
+    await InterventionStatusHistory.create({
+      intervention: interventionOid,
+      fromStatus: previousStatus,
+      toStatus: nextStatus,
+      actor: new Types.ObjectId(input.customerUserId),
+      reason: accepting
+        ? "Customer accepted the devis"
+        : "Customer rejected the devis",
+    });
+  } catch {
+    // audit log is best-effort
+  }
+
+  // Real-time fan-out (best-effort).
+  await publishInterventionEvent({
+    type: accepting
+      ? "intervention.quote.accepted"
+      : "intervention.quote.rejected",
+    interventionId: interventionOid.toHexString(),
+    data: {
+      quoteId: quoteOid.toHexString(),
+      by: input.customerUserId,
+      at: now.toISOString(),
+    },
+    emittedAt: now.toISOString(),
+  });
+  await publishInterventionEvent({
+    type: "intervention.status-changed",
+    interventionId: interventionOid.toHexString(),
+    data: {
+      action: accepting ? "accept-quote" : "reject-quote",
+      from: previousStatus,
+      to: nextStatus,
+      quoteId: quoteOid.toHexString(),
+      at: now.toISOString(),
+    },
+    emittedAt: now.toISOString(),
+  });
+
+  return {
+    interventionId: interventionOid.toHexString(),
+    quoteId: quoteOid.toHexString(),
+    decision: input.decision,
+    previousStatus,
+    status: nextStatus,
+    quoteStatus,
+  };
+}
+
 function toObjectId(value: string): Types.ObjectId {
   if (!Types.ObjectId.isValid(value)) {
     throw AppError.badRequest("Invalid interventionId");

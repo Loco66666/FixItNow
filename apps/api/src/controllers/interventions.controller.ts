@@ -1,6 +1,9 @@
 import type { NextFunction, Request, Response } from "express";
 import type { InterventionAction } from "@fixitnow/types";
-import { createQuote } from "../services/intervention-quotes.service";
+import {
+  createQuote,
+  decideQuote,
+} from "../services/intervention-quotes.service";
 import type { QuoteItemInput } from "../services/intervention-quotes.service";
 
 /**
@@ -35,6 +38,34 @@ export async function createQuoteController(
     });
 
     res.status(201).json({ data: result });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * POST /interventions/:id/quote/:quoteId/accept | /reject
+ *
+ * Customer decision on a devis of their own intervention. The route mounts
+ * `requireAuth` only — the service enforces ownership (403), the state machine
+ * (409 unless QUOTE_PENDING) and the compare-&-swap.
+ */
+export async function decideQuoteController(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    if (!req.auth) throw new Error("Missing auth context");
+
+    const result = await decideQuote({
+      interventionId: req.params.id,
+      quoteId: req.params.quoteId,
+      customerUserId: req.auth.userId,
+      decision: req.params.decision as "accept" | "reject",
+    });
+
+    res.status(200).json({ data: result });
   } catch (error) {
     next(error);
   }

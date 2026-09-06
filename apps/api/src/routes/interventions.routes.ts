@@ -11,11 +11,13 @@ import {
   interventionIdParamSchema,
   interventionListQuerySchema,
   interventionMatchCandidateParamSchema,
+  interventionQuoteParamSchema,
 } from "@fixitnow/types";
 import {
   acceptMatchingCandidateController,
   createInterventionController,
   createQuoteController,
+  decideQuoteController,
   getInterventionController,
   getInterventionHistoryController,
   getMatchingCandidatesController,
@@ -131,6 +133,21 @@ router.post(
   rateLimit({ name: "interventions.quote.create", max: 10, windowSec: 60 }),
   validate({ params: interventionIdParamSchema, body: createQuoteSchema }),
   createQuoteController
+);
+
+/**
+ * POST /interventions/:id/quote/:quoteId/:decision (accept | reject)
+ *
+ * Customer decision on a devis of their own intervention. `requireAuth` only —
+ * the service enforces ownership (403), the state machine (409 unless
+ * QUOTE_PENDING) and the compare-&-swap.
+ */
+router.post(
+  "/:id/quote/:quoteId/:decision",
+  requireAuth,
+  rateLimit({ name: "interventions.quote.decide", max: 30, windowSec: 60 }),
+  validate({ params: interventionQuoteParamSchema }),
+  decideQuoteController
 );
 
 export default router;

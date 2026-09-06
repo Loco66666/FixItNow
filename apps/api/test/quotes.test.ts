@@ -305,3 +305,152 @@ describe("POST /interventions/:id/quote", () => {
     expect(iv?.status).toBe("DIAGNOSING");
   });
 });
+
+describe("POST /interventions/:id/quote/:quoteId/:decision", () => {
+  /** Full setup: match → accept → diagnose → quote. Returns tokens + ids. */
+  async function setupPendingQuote() {
+    const owner = await makeUser({ role: "user" });
+    const intervention = await seedIntervention(owner.id);
+    const pro = await seedPro("Diagnosing Pro");
+
+    await matchAndAccept(String(intervention._id), owner.accessToken, pro);
+    await driveToDiagnosing(String(intervention._id), pro.accessToken);
+
+    const created = await request(app)
+      .post(`/interventions/${intervention._id}/quote`)
+      .set("Authorization", `Bearer ${pro.accessToken}`)
+      .send({ items: SAMPLE_ITEMS, notes: "Devis batterie" });
+    expect(created.status).toBe(201);
+    const quoteId = created.body.data.quoteId as string;
+
+    return {
+      owner,
+      pro,
+      interventionId: String(intervention._id),
+      quoteId,
+    };
+  }
+
+  const decide = (interventionId: string, quoteId: string, decision: string) =>
+    request(app).post(
+      `/interventions/${interventionId}/quote/${quoteId}/${decision}`
+    );
+
+  it("requires authentication", async () => {
+    const { interventionId, quoteId } = await setupPendingQuote();
+    const res = await decide(interventionId, quoteId, "accept");
+    expect(res.status).toBe(401);
+  });
+
+  it("403s when another customer (not the owner) decides", async () => {
+    const { interventionId, quoteId } = await setupPendingQuote();
+    const stranger = await makeUser({ role: "user" });
+
+    const res = await decide(interventionId, quoteId, "accept").set(
+      "Authorization",
+      `Bearer ${stranger.accessToken}`
+    );
+    expect(res.status).toBe(403);
+
+    const iv = await Intervention.findById(interventionId).lean();
+    expect(iv?.status).toBe("QUOTE_PENDING");
+  });
+
+  it("403s when the assigned professional tries to decide", async () => {
+    const { interventionId, quoteId, pro } = await setupPendingQuote();
+
+    const res = await decide(interventionId, quoteId, "accept").set(
+      "Authorization",
+      `Bearer ${pro.accessToken}`
+    );
+    expect(res.status).toBe(403);
+  });
+
+  it("accepts: QUOTE_PENDING -> QUOTE_ACCEPTED + quote ACCEPTED + SSE", async () => {
+    const { owner, interventionId, quoteId } = await setupPendingQuote();
+
+    const received: Array<{ type: string }> = [];
+    const cleanup = await subscribeInterventionEvent(interventionId, (e) =>
+      received.push(e)
+    );
+
+    const res = await decide(interventionId, quoteId, "accept").set(
+      "Authorization",
+      `Bearer ${owner.accessToken}`
+    );
+    expect(res.status).toBe(200);
+    expect(res.body.data.status).toBe("QUOTE_ACCEPTED");
+    expect(res.body.data.quoteStatus).toBe("ACCEPTED");
+
+    const iv = await Intervention.findById(interventionId).lean();
+    expect(iv?.status).toBe("QUOTE_ACCEPTED");
+
+    await cleanup();
+
+    const quote = await Quote.findById(quoteId).lean();
+    expect(quote?.status).toBe("ACCEPTED");
+
+    expect(received.some((e) => e.type === "intervention.quote.accepted")).toBe(
+      true
+    );
+    expect(received.some((e) => e.type === "intervention.status-changed")).toBe(
+      true
+    );
+
+    // History row for the customer decision.
+    const history = await InterventionStatusHistory.find({
+      intervention: new Types.ObjectId(interventionId),
+    }).lean();
+    expect(
+      history.some(
+        (h) =>
+          h.toStatus === "QUOTE_ACCEPTED" &&
+          h.reason === "Customer accepted the devis"
+      )
+    ).toBe(true);
+  });
+
+  it("rejects: QUOTE_PENDING -> DIAGNOSING (revised devis) + quote REJECTED", async () => {
+    const { owner, interventionId, quoteId } = await setupPendingQuote();
+
+    const res = await decide(interventionId, quoteId, "reject").set(
+      "Authorization",
+      `Bearer ${owner.accessToken}`
+    );
+    expect(res.status).toBe(200);
+    expect(res.body.data.status).toBe("DIAGNOSING");
+    expect(res.body.data.quoteStatus).toBe("REJECTED");
+
+    const iv = await Intervention.findById(interventionId).lean();
+    expect(iv?.status).toBe("DIAGNOSING");
+
+    const quote = await Quote.findById(quoteId).lean();
+    expect(quote?.status).toBe("REJECTED");
+  });
+
+  it("409s on a double decision (already QUOTE_ACCEPTED)", async () => {
+    const { owner, interventionId, quoteId } = await setupPendingQuote();
+
+    const first = await decide(interventionId, quoteId, "accept").set(
+      "Authorization",
+      `Bearer ${owner.accessToken}`
+    );
+    expect(first.status).toBe(200);
+
+    const second = await decide(interventionId, quoteId, "accept").set(
+      "Authorization",
+      `Bearer ${owner.accessToken}`
+    );
+    expect(second.status).toBe(409);
+  });
+
+  it("400s on an unknown decision verb", async () => {
+    const { owner, interventionId, quoteId } = await setupPendingQuote();
+
+    const res = await decide(interventionId, quoteId, "maybe").set(
+      "Authorization",
+      `Bearer ${owner.accessToken}`
+    );
+    expect(res.status).toBe(400);
+  });
+});

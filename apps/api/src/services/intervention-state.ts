@@ -55,7 +55,13 @@ export const INTERVENTION_TRANSITIONS: Record<
     provider: [InterventionStatus.QUOTE_PENDING, InterventionStatus.COMPLETED],
   },
   [InterventionStatus.QUOTE_PENDING]: {
-    customer: [InterventionStatus.QUOTE_ACCEPTED],
+    // Customer decision: accept → QUOTE_ACCEPTED (pro can then move to
+    // IN_PROGRESS), or reject → back to DIAGNOSING so the provider may submit
+    // a revised devis (Service-Public F38350: pricing disclosure loop).
+    customer: [
+      InterventionStatus.QUOTE_ACCEPTED,
+      InterventionStatus.DIAGNOSING,
+    ],
   },
   [InterventionStatus.QUOTE_ACCEPTED]: {
     provider: [InterventionStatus.IN_PROGRESS],

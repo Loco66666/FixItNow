@@ -21,7 +21,9 @@ export interface ProviderRealtimeStatusSnapshot {
 export type InterventionEventType =
   | "intervention.accepted"
   | "intervention.status-changed"
-  | "intervention.quote.created";
+  | "intervention.quote.created"
+  | "intervention.quote.accepted"
+  | "intervention.quote.rejected";
 
 export interface InterventionEvent {
   type: InterventionEventType;
